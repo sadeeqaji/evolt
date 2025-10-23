@@ -87,7 +87,7 @@ WHATSAPP_VERIFY_TOKEN=pmAuEo8mjEn97ca8JPow23rKslRB11Gg
 # ─── Email ───────────────────────────────
 
 SENDGRID_API_KEY=<your_sendgrid_key>
-EMAIL_FROM=no-reply@evolt.io
+EMAIL_FROM=sadiq@mindcolony.tech
 
 # ─── Optional AI Assistant ───────────────
 
