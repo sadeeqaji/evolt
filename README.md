@@ -51,23 +51,23 @@ This installs dependencies for both:
 
 Backend (apps/evolt-be/.env)
 
-# ─── General ─────────────────────────────
+# ─── General ───
 
 DATABASE_URL=mongodb+srv://<user>:<password>@cluster.mongodb.net/evolt
 JWT_SECRET=your_jwt_secret
 
-# ─── Redis ───────────────────────────────
+# ─── Redis ────
 
 UPSTASH_REDIS_URL=redis://...
 
-# ─── Azure Storage ───────────────────────
+# ─── Azure Storage ───
 
 AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=...
 AZURE_STORAGE_CONTAINER=kyc-documents
 AZURE_KEY_VAULT_URI=https://ev-wallet-kv.vault.azure.net/
 KV_WRAP_KEY_NAME=ev-wrap-key
 
-# ─── Hedera Network ──────────────────────
+# ─── Hedera Network ────
 
 HEDERA_OPERATOR_ID=0.0.xxxxxxx
 HEDERA_OPERATOR_KEY=302e02...
@@ -78,13 +78,13 @@ HEDERA_USDC_TOKEN_ID=0.0.7098968
 HEDERA_USDT_TOKEN_ID=0.0.7098970
 VOLT_ESCROW_CONTRACT_ID=0.0.123789
 
-# ─── WhatsApp Cloud API ──────────────────
+# ─── WhatsApp Cloud API ────────
 
 WHATSAPP_TOKEN=<your_meta_token>
 WHATSAPP_PHONE_ID=585552874640448
 WHATSAPP_VERIFY_TOKEN=pmAuEo8mjEn97ca8JPow23rKslRB11Gg
 
-# ─── Email ───────────────────────────────
+# ─── Email ─────────
 
 SENDGRID_API_KEY=<your_sendgrid_key>
 EMAIL_FROM=sadiq@mindcolony.tech
