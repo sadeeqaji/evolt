@@ -1,0 +1,16 @@
+{
+  "name": "evolt",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:be\" \"npm run dev:fe\"",
+    "dev:be": "cd apps/evolt-be && npm run start:dev",
+    "dev:fe": "cd apps/evolt-fe && npm run dev"
+  },
+  "workspaces": [
+    "apps/evolt-be",
+    "apps/evolt-fe"
+  ],
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}
