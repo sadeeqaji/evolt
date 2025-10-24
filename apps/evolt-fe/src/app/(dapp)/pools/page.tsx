@@ -175,7 +175,7 @@ export default function PoolsPage() {
         {!isLoading && !isError && items.length > 0 && (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {items.map((it) => {
-              const fundedAmount = it?.amount ?? 0;
+              const fundedAmount = it?.fundedAmount ?? 0;
               const totalTarget = it?.totalTarget ?? 0;
               const daysLeft = getDaysLeft(it?.expiryDate ?? null);
 
@@ -183,6 +183,7 @@ export default function PoolsPage() {
                 0,
                 Math.min(100, Math.round((fundedAmount / totalTarget) * 100))
               );
+
               const status = toCardStatus(it, daysLeft, pct);
               const leftText =
                 status === "Open"
