@@ -5,7 +5,7 @@ import { BackButton } from "@evolt/components/common/BackButton";
 import { Button } from "@evolt/components/ui/button";
 import { InvoiceCard } from "@evolt/components/features/dashboard/InvoiceDetailCard";
 import { InvestmentDrawer } from "@evolt/components/features/dashboard/InvestmentDrawer";
-import { usePoolDetails } from "@evolt/app/(dapp)/dashboard/pools/api";
+import { usePoolDetails } from "@evolt/app/(dapp)/pools/api";
 import { StatusDisplay } from "@evolt/components/common/StatusDisplay";
 
 function formatDateTime(iso?: string | null) {
@@ -30,8 +30,8 @@ function hashscanTxUrl(
 ) {
   return hcsTxId
     ? `https://hashscan.io/${network}/transaction/${encodeURIComponent(
-        hcsTxId
-      )}`
+      hcsTxId
+    )}`
     : "#";
 }
 
@@ -111,7 +111,7 @@ export default function PoolDetailClient({ poolId }: PoolDetailClientProps) {
       >
         {data.status === "funding"
           ? "Join Capital Pool"
-          : "Pool Not Open for Investment"}
+          : "Pool not open for Investment"}
       </Button>
 
       <InvestmentDrawer
