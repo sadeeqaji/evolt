@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const apiClient = axios.create({
-  baseURL: "https://krishna-incongruent-interconvertibly.ngrok-free.dev/api/v1",
+  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL,
 });
 
 apiClient.interceptors.request.use(
