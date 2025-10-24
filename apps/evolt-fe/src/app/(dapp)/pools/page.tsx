@@ -74,8 +74,8 @@ function toCardStatus(
   daysLeft: number,
   percentage: number
 ): "Open" | "Closed" | "Pending" {
-  if (item?.status === "funding") return "Open";
-  if (item?.status === "fully_funded" || item?.status === "tokenized")
+  if (item?.fundingStatus === "funding") return "Open";
+  if (item?.fundingStatus === "fully_funded" || item?.status === "tokenized")
     return "Closed";
   if (item?.status === "pending") return "Pending";
 
@@ -179,28 +179,19 @@ export default function PoolsPage() {
               const totalTarget = it?.totalTarget ?? 0;
               const daysLeft = getDaysLeft(it?.expiryDate ?? null);
 
-              const pct =
-                totalTarget > 0
-                  ? Math.max(
-                      0,
-                      Math.min(
-                        100,
-                        Math.round((fundedAmount / totalTarget) * 100)
-                      )
-                    )
-                  : fundedAmount > 0
-                  ? 100
-                  : 0;
-
+              const pct = Math.max(
+                0,
+                Math.min(100, Math.round((fundedAmount / totalTarget) * 100))
+              );
               const status = toCardStatus(it, daysLeft, pct);
               const leftText =
                 status === "Open"
                   ? `${daysLeft} Days Left`
                   : pct >= 100
-                  ? "Fully Subscribed"
-                  : status === "Closed"
-                  ? "Closed"
-                  : "Status Unavailable";
+                    ? "Fully Subscribed"
+                    : status === "Closed"
+                      ? "Closed"
+                      : "Status Unavailable";
 
               return (
                 it?._id && (

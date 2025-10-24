@@ -31,8 +31,8 @@ export function InvestmentDrawer({
   open,
   onOpenChange,
   tokenId,
-  minPurchase, // Used for Min boundary
-  maxPurchase, // Used for Max boundary
+  minPurchase,
+  maxPurchase,
   invoiceNumber,
   apy,
   duration,
@@ -94,7 +94,6 @@ export function InvestmentDrawer({
   const handleConfirm = async () => {
     const stakeAmount = parseFloat(amount);
 
-    // Additional validation for min/max on confirm (just in case)
     if (stakeAmount < minPurchase || stakeAmount > maxPurchase) {
       toast.error(
         `Amount must be between ${minPurchase} and ${maxPurchase} VUSD.`
