@@ -41,7 +41,7 @@ export const DepositSummaryCard = ({
         amount,
       });
 
-      push("/dashboard");
+      push("/");
     } catch (error) {
       console.error("Swap failed:", error);
     } finally {

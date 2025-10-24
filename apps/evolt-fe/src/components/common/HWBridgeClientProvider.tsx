@@ -9,7 +9,8 @@ import React, {
 } from "react";
 import Header from "@evolt/components/common/Header";
 import PageLoader from "./PageLoader";
-import { getHashinalsSDK } from "@evolt/lib/hashinalsClient";
+// Remove the static import from here:
+// import { getHashinalsSDK } from "@evolt/lib/hashinalsClient";
 import { HashinalsWalletConnectSDK } from "@hashgraphonline/hashinal-wc";
 
 interface HWBridgeContextType {
@@ -42,7 +43,10 @@ export function HWBridgeClientProvider({
 
     async function init() {
       try {
+        // Dynamically import the hashinalsClient only on the client side
+        const { getHashinalsSDK } = await import("@evolt/lib/hashinalsClient");
         const instance = await getHashinalsSDK();
+
         if (!mounted) return;
         setSdk(instance);
 

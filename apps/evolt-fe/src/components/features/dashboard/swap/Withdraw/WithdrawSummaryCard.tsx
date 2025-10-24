@@ -42,7 +42,7 @@ export const WithdrawSummaryCard = ({
         amount: amountToWithdraw,
       });
       // Optionally navigate or refresh balance after success
-      push("/dashboard");
+      push("/");
     } catch (error) {
       console.error("Withdrawal failed:", error);
     }

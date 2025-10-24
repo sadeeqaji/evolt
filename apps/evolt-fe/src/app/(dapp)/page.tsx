@@ -13,21 +13,21 @@ const Tabs: TabConfig[] = [
     label: "My Assets",
     icon: Database,
     type: "link" as const,
-    href: "/dashboard/assets?tab=assets",
+    href: "/assets?tab=assets",
   },
   {
     id: "deposit",
     label: "Deposit",
     icon: ArrowDownLeft,
     type: "link" as const,
-    href: "/dashboard/assets?tab=deposit",
+    href: "/assets?tab=deposit",
   },
   {
     id: "withdraw",
     label: "Withdraw",
     icon: ArrowUpRight,
     type: "link" as const,
-    href: "/dashboard/assets?tab=withdraw",
+    href: "/assets?tab=withdraw",
   },
 ];
 

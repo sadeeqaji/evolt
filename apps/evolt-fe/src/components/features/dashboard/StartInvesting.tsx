@@ -24,7 +24,7 @@ const StartInvestings = () => {
             </div>
 
             <Button
-              onClick={() => push("/dashboard/pools")}
+              onClick={() => push("/pools")}
               variant="link"
               style={{ padding: 0 }}
               className="text-primary hover:text-primary/80 h-auto md:text-lg text-base font-medium group/button p-0 m-0"

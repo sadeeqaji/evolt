@@ -44,7 +44,7 @@ const Header = () => {
   return (
     <header className="flex items-center justify-between py-4 max-w-6xl m-auto">
       <div className="flex items-center gap-2">
-        <Link href="/dashboard">
+        <Link href="/">
           <Logo />
         </Link>
       </div>
