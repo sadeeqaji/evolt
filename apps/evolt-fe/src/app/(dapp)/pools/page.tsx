@@ -18,43 +18,43 @@ const categories: {
   colorClass: string;
   type: AssetType;
 }[] = [
-  {
-    title: "All Assets",
-    image: "/img/all.jpeg",
-    colorClass: "bg-primary/70",
-    type: "all",
-  },
-  {
-    title: "Real Estate",
-    image: "/img/real-estate.jpg",
-    colorClass: "bg-[hsl(var(--real-estate))]",
-    type: "real_estate",
-  },
-  {
-    title: "Agriculture",
-    image: "/img/agriculture.jpg",
-    colorClass: "bg-[hsl(var(--agriculture))]",
-    type: "agriculture",
-  },
-  {
-    title: "Creator IP",
-    image: "/img/art-collectibles.jpg",
-    colorClass: "bg-[hsl(var(--art-collectibles))]",
-    type: "creator_ip",
-  },
-  {
-    title: "Receivables Factoring",
-    image: "/img/private-credit.jpg",
-    colorClass: "bg-[hsl(var(--private-credit))]",
-    type: "receivable",
-  },
-  {
-    title: "Automotive & Equipment",
-    image: "/img/infrastructure.jpg",
-    colorClass: "bg-[hsl(var(--infrastructure))]",
-    type: "automotive_equipment",
-  },
-];
+    {
+      title: "All Assets",
+      image: "/img/all.jpeg",
+      colorClass: "bg-primary/70",
+      type: "all",
+    },
+    {
+      title: "Real Estate",
+      image: "/img/real-estate.jpg",
+      colorClass: "bg-[hsl(var(--real-estate))]",
+      type: "real_estate",
+    },
+    {
+      title: "Agriculture",
+      image: "/img/agriculture.jpg",
+      colorClass: "bg-[hsl(var(--agriculture))]",
+      type: "agriculture",
+    },
+    {
+      title: "Creator IP",
+      image: "/img/art-collectibles.jpg",
+      colorClass: "bg-[hsl(var(--art-collectibles))]",
+      type: "creator_ip",
+    },
+    {
+      title: "Receivables Factoring",
+      image: "/img/private-credit.jpg",
+      colorClass: "bg-[hsl(var(--private-credit))]",
+      type: "receivable",
+    },
+    {
+      title: "Automotive & Equipment",
+      image: "/img/infrastructure.jpg",
+      colorClass: "bg-[hsl(var(--infrastructure))]",
+      type: "automotive_equipment",
+    },
+  ];
 
 function getDaysLeft(expiryDate: string | null): number {
   if (!expiryDate) return 0;
@@ -74,8 +74,8 @@ function toCardStatus(
   daysLeft: number,
   percentage: number
 ): "Open" | "Closed" | "Pending" {
-  if (item?.status === "funding") return "Open";
-  if (item?.status === "fully_funded" || item?.status === "tokenized")
+  if (item?.fundingStatus === "funding") return "Open";
+  if (item?.fundingStatus === "fully_funded" || item?.status === "tokenized")
     return "Closed";
   if (item?.status === "pending") return "Pending";
 
@@ -182,25 +182,25 @@ export default function PoolsPage() {
               const pct =
                 totalTarget > 0
                   ? Math.max(
-                      0,
-                      Math.min(
-                        100,
-                        Math.round((fundedAmount / totalTarget) * 100)
-                      )
+                    0,
+                    Math.min(
+                      100,
+                      Math.round((fundedAmount / totalTarget) * 100)
                     )
+                  )
                   : fundedAmount > 0
-                  ? 100
-                  : 0;
+                    ? 100
+                    : 0;
 
               const status = toCardStatus(it, daysLeft, pct);
               const leftText =
                 status === "Open"
                   ? `${daysLeft} Days Left`
                   : pct >= 100
-                  ? "Fully Subscribed"
-                  : status === "Closed"
-                  ? "Closed"
-                  : "Status Unavailable";
+                    ? "Fully Subscribed"
+                    : status === "Closed"
+                      ? "Closed"
+                      : "Status Unavailable";
 
               return (
                 it?._id && (

@@ -11,6 +11,7 @@ export type PoolItem = {
   _id: string;
   assetType?: string;
   status?: PoolStatus | string;
+  fundingStatus: PoolStatus;
   tokenName?: string;
   amount?: number; // Assuming this is fundedAmount
   currency?: string;
