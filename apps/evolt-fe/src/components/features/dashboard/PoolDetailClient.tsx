@@ -30,8 +30,8 @@ function hashscanTxUrl(
 ) {
   return hcsTxId
     ? `https://hashscan.io/${network}/transaction/${encodeURIComponent(
-        hcsTxId
-      )}`
+      hcsTxId
+    )}`
     : "#";
 }
 
@@ -111,7 +111,7 @@ export default function PoolDetailClient({ poolId }: PoolDetailClientProps) {
       >
         {data.status === "funding"
           ? "Join Capital Pool"
-          : "Pool Not Open for Investment"}
+          : "Pool not open for Investment"}
       </Button>
 
       <InvestmentDrawer

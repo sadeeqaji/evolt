@@ -32,7 +32,7 @@ export const InvestmentCard = ({
   const { push } = useRouter();
   return (
     <div
-      onClick={() => push(`/dashboard/pools/${id}`)}
+      onClick={() => push(`/pools/${id}`)}
       className={cn(
         "bg-black cursor-pointer rounded-3xl border border-border overflow-hidden p-6 transition-all duration-300 ease-smooth shadow-card hover:shadow-glow",
         "hover:bg-card-hover"

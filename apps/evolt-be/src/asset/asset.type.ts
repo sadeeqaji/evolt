@@ -34,6 +34,8 @@ ensureDiscriminator("real_estate", {
 
 export type AssetStatus = "pending" | "verified" | "tokenized";
 
+export type FundingStatus = "funding" | "funded" | "fully_funded";
+
 export type AssetType =
     | "invoice"
     | "agriculture"
@@ -49,6 +51,8 @@ export const ASSET_TYPES: AssetType[] = [
     "receivable",
 ];
 
+
+
 export interface AssetDoc extends Document {
     _id: mongoose.Types.ObjectId;
     assetType: AssetType;
@@ -57,6 +61,8 @@ export interface AssetDoc extends Document {
     yieldRate: number;
     durationDays: number;
     status: AssetStatus;
+    fundedAmount?: number;
+    fundingStatus?: FundingStatus;
     description: string;
 
     originatorId: mongoose.Types.ObjectId | BusinessDoc;
@@ -66,16 +72,15 @@ export interface AssetDoc extends Document {
     verifier?: string;
     tokenName: string;
 
-    tokenId?: string; // e.g. "0.0.12345"
-    tokenEvm?: string; // e.g. "0xabc..."
+    tokenId?: string;
+    tokenEvm?: string;
     escrowContractId?: string;
     escrowEvm?: string;
-    hcsTxId?: string; // Hedera Consensus Service Tx ID
+    hcsTxId?: string;
 
-    totalTarget?: number; // total fundraising goal
-    minInvestment?: number; // min investor contribution
-    maxInvestment?: number; // max investor contribution
-
+    totalTarget?: number;
+    minInvestment?: number;
+    maxInvestment?: number;
     expiryDate?: Date;
     verifiedAt?: Date;
     createdAt: Date;
