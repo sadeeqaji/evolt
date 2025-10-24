@@ -8,8 +8,8 @@ interface PageProps {
   };
 }
 
-export default function Page({ params }: PageProps) {
-  const { poolId } = params;
+export default async function Page({ params }: PageProps) {
+  const { poolId } = await params;
 
   return (
     <Suspense fallback={<PoolDetailSkeleton />}>
