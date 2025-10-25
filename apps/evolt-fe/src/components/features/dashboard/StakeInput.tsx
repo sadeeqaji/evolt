@@ -8,6 +8,7 @@ interface StakeInputProps {
   min: number;
   max: number;
   onAmountChange: (value: string) => void;
+  onAmountBlur?: () => void;
 }
 
 export const StakeInput: React.FC<StakeInputProps> = ({
@@ -16,23 +17,23 @@ export const StakeInput: React.FC<StakeInputProps> = ({
   tokenPair,
   amount,
   onAmountChange,
+  onAmountBlur,
   min,
   max,
 }) => {
   const handleMaxClick = () => {
-    onAmountChange(availableBalance.toString());
+    onAmountChange(Math.min(max, availableBalance).toString());
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = e.target;
-
     if (/^\d*\.?\d*$/.test(value)) {
       onAmountChange(value);
     }
   };
 
   return (
-    <div className="bg-[#131316] border border-[#2D2D33] rounded-2xl p-4 sm:p-5 w-full  font-sans">
+    <div className="bg-[#131316] border border-[#2D2D33] rounded-2xl p-4 sm:p-5 w-full font-sans">
       <div className="flex justify-between items-center mb-3">
         <label
           htmlFor="stake-amount"
@@ -58,13 +59,15 @@ export const StakeInput: React.FC<StakeInputProps> = ({
           inputMode="decimal"
           value={amount}
           onChange={handleChange}
+          onBlur={onAmountBlur}
           placeholder="0.00"
           className="bg-transparent border-none outline-none text-white w-full font-medium text-lg leading-none"
         />
       </div>
 
-      <p className="text-right mt-2 text-gray-400 text-sm">
-        Avl: {availableBalance.toFixed(2)} {currency}
+      <p className="text-right mt-2 text-gray-400 text-xs">
+        Min: {min.toFixed(2)} | Max: {max.toFixed(2)} | Avl:{" "}
+        {availableBalance.toFixed(2)} {currency}
       </p>
     </div>
   );

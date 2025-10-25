@@ -37,7 +37,6 @@ export function InvestmentDrawer({
   apy,
   duration,
 }: InvestmentDrawerProps) {
-  // Use minPurchase as the initial amount instead of a hardcoded "500"
   const [amount, setAmount] = useState(String(minPurchase));
   const [consent, setConsent] = useState(false);
 
@@ -65,38 +64,56 @@ export function InvestmentDrawer({
     }
   };
 
+  // ✅ Float entry + validation + wallet check
   const handleAmountChange = (newAmount: string) => {
-    if (newAmount === "" || newAmount === "." || newAmount === "0") {
+    if (newAmount === "" || newAmount === "." || newAmount === "0.") {
       setAmount(newAmount);
       return;
     }
 
+    if (!/^\d*\.?\d*$/.test(newAmount)) return;
+
     const value = parseFloat(newAmount);
+    if (isNaN(value)) return;
 
-    if (isNaN(value)) {
+    const balance = availableBalance ?? 0;
+
+    // Balance check
+    if (value > balance) {
+      setAmount(newAmount); // let user see what they typed
       return;
     }
 
-    if (value < minPurchase) {
-      setAmount(String(minPurchase));
-      return;
-    }
-
-    if (value > maxPurchase) {
-      toast.warning(`Maximum purchase is ${maxPurchase} VUSD`);
-      setAmount(String(maxPurchase));
+    // Range checks
+    if (value < minPurchase || value > maxPurchase) {
+      setAmount(newAmount);
       return;
     }
 
     setAmount(newAmount);
   };
 
+  // ✅ Round value on blur
+  const handleAmountBlur = () => {
+    if (!amount) return;
+    const value = parseFloat(amount);
+    if (!isNaN(value)) setAmount(value.toFixed(2));
+  };
+
   const handleConfirm = async () => {
     const stakeAmount = parseFloat(amount);
+    const balance = availableBalance ?? 0;
 
     if (stakeAmount < minPurchase || stakeAmount > maxPurchase) {
       toast.error(
         `Amount must be between ${minPurchase} and ${maxPurchase} VUSD.`
+      );
+      return;
+    }
+
+    if (stakeAmount > balance) {
+      toast.error(
+        `Insufficient balance. Available: ${balance.toFixed(2)} VUSD`
       );
       return;
     }
@@ -142,9 +159,20 @@ export function InvestmentDrawer({
   const showContent =
     open && (isTokenAssociated === true || !accountId || !tokenId);
 
+  const amountValue = parseFloat(amount || "0");
+  const balance = availableBalance ?? 0;
+  const hasInsufficientBalance = amountValue > balance;
+
   const amountIsValid =
-    parseFloat(amount || "0") >= minPurchase &&
-    parseFloat(amount || "0") <= maxPurchase;
+    amountValue >= minPurchase &&
+    amountValue <= maxPurchase &&
+    !hasInsufficientBalance;
+
+  const buttonText = hasInsufficientBalance
+    ? "Insufficient Balance"
+    : isJoining
+      ? "Processing Transaction..."
+      : "Confirm & Join Pool";
 
   return (
     <Drawer open={showContent || forceOpen} onOpenChange={onOpenChange}>
@@ -164,11 +192,12 @@ export function InvestmentDrawer({
           ) : (
             <div className="px-6 pb-8 space-y-6">
               <StakeInput
-                availableBalance={availableBalance ?? 0.0}
+                availableBalance={balance}
                 currency="VUSD"
                 tokenPair="USDT/VUSD"
                 amount={amount}
                 onAmountChange={handleAmountChange}
+                onAmountBlur={handleAmountBlur}
                 min={minPurchase}
                 max={maxPurchase}
               />
@@ -187,7 +216,7 @@ export function InvestmentDrawer({
               <div className="space-y-3">
                 <div className="flex items-baseline gap-2">
                   <span className="text-text-secondary">
-                    You are staking :-
+                    You are investing:
                   </span>
                   <span className="text-xl font-semibold text-text-primary">
                     {amount} VUSD
@@ -195,14 +224,14 @@ export function InvestmentDrawer({
                 </div>
 
                 <div className="flex items-baseline gap-2">
-                  <span className="text-text-secondary">Into Pool for :-</span>
+                  <span className="text-text-secondary">Into Pool for:</span>
                   <span className="text-xl font-semibold text-text-primary">
                     Invoice {invoiceNumber}
                   </span>
                 </div>
 
                 <div className="flex items-baseline gap-2">
-                  <span className="text-text-secondary">Duration :-</span>
+                  <span className="text-text-secondary">Duration:</span>
                   <span className="text-xl font-semibold text-text-primary">
                     {duration} Days
                   </span>
@@ -210,7 +239,7 @@ export function InvestmentDrawer({
 
                 <div className="flex items-baseline gap-2">
                   <span className="text-text-secondary">
-                    Estimated Earnings :-
+                    Estimated Earnings:
                   </span>
                   <span className="text-xl font-semibold text-text-primary">
                     {estimatedEarnings} VUSD
@@ -248,11 +277,13 @@ export function InvestmentDrawer({
                 }
                 size="lg"
                 loading={isJoining}
-                className="w-full rounded-2xl h-14 text-lg font-medium"
+                className={`w-full rounded-2xl h-14 text-lg font-medium ${
+                  hasInsufficientBalance
+                    ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                    : ""
+                }`}
               >
-                {isJoining
-                  ? "Processing Transaction..."
-                  : "Confirm & Join Pool"}
+                {buttonText}
               </Button>
             </div>
           )}
