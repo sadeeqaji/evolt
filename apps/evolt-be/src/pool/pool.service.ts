@@ -197,8 +197,15 @@ class PoolService {
             {
                 $group: {
                     _id: null,
-                    totalInvestors: { $sum: 1 },
+                    investors: { $addToSet: { $ifNull: ["$investorId", "$investorEvm"] } },
                     totalFunded: { $sum: "$vusdAmount" },
+                },
+            },
+            {
+                $project: {
+                    _id: 0,
+                    totalFunded: 1,
+                    totalInvestors: { $size: "$investors" },
                 },
             },
         ]);
