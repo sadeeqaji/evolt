@@ -14,6 +14,8 @@ import { AssociateTokenDialog } from "@evolt/components/common/AssociateTokenMod
 import { toast } from "sonner";
 import { useJoinPool } from "@evolt/hooks/useJoinPool";
 import { useGetVUSDBalance } from "@evolt/hooks/useGetVUSDBalance";
+import { InvestmentSuccessModal } from "./InvestmentSuccessModal"; // Import the new modal
+import { useRouter } from "next/navigation"; // Import the router
 
 interface InvestmentDrawerProps {
   open: boolean;
@@ -39,6 +41,7 @@ export function InvestmentDrawer({
 }: InvestmentDrawerProps) {
   const [amount, setAmount] = useState(String(minPurchase));
   const [consent, setConsent] = useState(false);
+  const router = useRouter(); // Initialize router
 
   const { balance: availableBalance } = useGetVUSDBalance();
   const { accountId } = useHWBridge();
@@ -47,7 +50,15 @@ export function InvestmentDrawer({
     loading: tokenLoading,
     handleAssociate: originalHandleAssociate,
   } = useTokenAssociation(tokenId);
-  const { loading: isJoining, joinPool } = useJoinPool();
+
+  // Get new state and functions from the hook
+  const {
+    loading: isJoining,
+    joinPool,
+    investmentSuccessData,
+    clearInvestmentSuccess,
+  } = useJoinPool();
+
   const [forceOpen, setForceOpen] = useState(false);
 
   const estimatedEarnings = (
@@ -73,23 +84,6 @@ export function InvestmentDrawer({
 
     if (!/^\d*\.?\d*$/.test(newAmount)) return;
 
-    const value = parseFloat(newAmount);
-    if (isNaN(value)) return;
-
-    const balance = availableBalance ?? 0;
-
-    // Balance check
-    if (value > balance) {
-      setAmount(newAmount); // let user see what they typed
-      return;
-    }
-
-    // Range checks
-    if (value < minPurchase || value > maxPurchase) {
-      setAmount(newAmount);
-      return;
-    }
-
     setAmount(newAmount);
   };
 
@@ -97,7 +91,19 @@ export function InvestmentDrawer({
   const handleAmountBlur = () => {
     if (!amount) return;
     const value = parseFloat(amount);
-    if (!isNaN(value)) setAmount(value.toFixed(2));
+    if (!isNaN(value)) {
+      // On blur, clamp to min if below, but don't auto-clamp to max
+      if (value < minPurchase && value > 0) {
+        setAmount(minPurchase.toFixed(2));
+      } else {
+        setAmount(value.toFixed(2));
+      }
+    }
+  };
+
+  const resetForm = () => {
+    setAmount(String(minPurchase));
+    setConsent(false);
   };
 
   const handleConfirm = async () => {
@@ -106,7 +112,9 @@ export function InvestmentDrawer({
 
     if (stakeAmount < minPurchase || stakeAmount > maxPurchase) {
       toast.error(
-        `Amount must be between ${minPurchase} and ${maxPurchase} VUSD.`
+        `Amount must be between ${minPurchase.toFixed(
+          2
+        )} and ${maxPurchase.toFixed(2)} VUSD.`
       );
       return;
     }
@@ -133,12 +141,23 @@ export function InvestmentDrawer({
         assetId,
       });
 
-      onOpenChange(false);
-      setAmount(String(minPurchase));
-      setConsent(false);
+      // Don't close drawer here, the success modal will appear
+      // onOpenChange(false);
+      resetForm();
     } catch (error) {
       console.error("Failed to join pool from drawer:", error);
     }
+  };
+
+  // Handlers for the success modal
+  const handleContinueInvesting = () => {
+    clearInvestmentSuccess();
+    onOpenChange(false); // Close the investment drawer
+  };
+
+  const handleViewPortfolio = () => {
+    clearInvestmentSuccess();
+    onOpenChange(false); // Close the investment drawer
   };
 
   const isLoading = tokenLoading || isJoining;
@@ -166,7 +185,8 @@ export function InvestmentDrawer({
   const amountIsValid =
     amountValue >= minPurchase &&
     amountValue <= maxPurchase &&
-    !hasInsufficientBalance;
+    !hasInsufficientBalance &&
+    amountValue > 0;
 
   const buttonText = hasInsufficientBalance
     ? "Insufficient Balance"
@@ -175,120 +195,135 @@ export function InvestmentDrawer({
       : "Confirm & Join Pool";
 
   return (
-    <Drawer open={showContent || forceOpen} onOpenChange={onOpenChange}>
-      <DrawerContent className="bg-drawer-bg border-drawer-border bg-black">
-        <div className="mx-auto w-full max-w-md overflow-y-auto overflow-x-hidden max-h-[90vh]">
-          <DrawerHeader className="pt-8">
-            <div className="mx-auto mb-2 h-1 w-16 rounded-full bg-text-muted/40" />
-            <DrawerTitle className="text-center text-2xl font-semibold text-text-primary">
-              Join Investment Capital Pool
-            </DrawerTitle>
-          </DrawerHeader>
+    <>
+      <Drawer open={showContent || forceOpen} onOpenChange={onOpenChange}>
+        <DrawerContent className="bg-drawer-bg border-drawer-border bg-black">
+          <div className="mx-auto w-full max-w-md overflow-y-auto overflow-x-hidden max-h-[90vh]">
+            <DrawerHeader className="pt-8">
+              <div className="mx-auto mb-2 h-1 w-16 rounded-full bg-text-muted/40" />
+              <DrawerTitle className="text-center text-2xl font-semibold text-text-primary">
+                Join Investment Capital Pool
+              </DrawerTitle>
+            </DrawerHeader>
 
-          {isLoading && tokenId ? (
-            <div className="p-8 text-center text-text-muted">
-              Loading wallet data...
-            </div>
-          ) : (
-            <div className="px-6 pb-8 space-y-6">
-              <StakeInput
-                availableBalance={balance}
-                currency="VUSD"
-                tokenPair="USDT/VUSD"
-                amount={amount}
-                onAmountChange={handleAmountChange}
-                onAmountBlur={handleAmountBlur}
-                min={minPurchase}
-                max={maxPurchase}
-              />
-
-              <p className="text-xs text-text-muted text-center">
-                Minimum purchase:{" "}
-                <span className="text-text-primary font-medium">
-                  {minPurchase} VUSD
-                </span>{" "}
-                | Maximum purchase:{" "}
-                <span className="text-text-primary font-medium">
-                  {maxPurchase} VUSD
-                </span>
-              </p>
-
-              <div className="space-y-3">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-text-secondary">
-                    You are investing:
-                  </span>
-                  <span className="text-xl font-semibold text-text-primary">
-                    {amount} VUSD
-                  </span>
-                </div>
-
-                <div className="flex items-baseline gap-2">
-                  <span className="text-text-secondary">Into Pool for:</span>
-                  <span className="text-xl font-semibold text-text-primary">
-                    Assets {assetId}
-                  </span>
-                </div>
-
-                <div className="flex items-baseline gap-2">
-                  <span className="text-text-secondary">Duration:</span>
-                  <span className="text-xl font-semibold text-text-primary">
-                    {duration} Days
-                  </span>
-                </div>
-
-                <div className="flex items-baseline gap-2">
-                  <span className="text-text-secondary">
-                    Estimated Earnings:
-                  </span>
-                  <span className="text-xl font-semibold text-text-primary">
-                    {estimatedEarnings} VUSD
-                  </span>
-                  <span className="text-success font-medium">{apy}%</span>
-                </div>
+            {tokenLoading && tokenId ? (
+              <div className="p-8 text-center text-text-muted">
+                Loading wallet data...
               </div>
-
-              <div className="h-px bg-drawer-border" />
-
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="consent"
-                  checked={consent}
-                  onCheckedChange={(checked) => setConsent(checked as boolean)}
-                  className="mt-1 border-drawer-border data-[state=checked]:bg-indigo data-[state=checked]:border-indigo"
+            ) : (
+              <div className="px-6 pb-8 space-y-6">
+                <StakeInput
+                  availableBalance={balance}
+                  currency="VUSD"
+                  tokenPair="USDT/VUSD"
+                  amount={amount}
+                  onAmountChange={handleAmountChange}
+                  onAmountBlur={handleAmountBlur}
+                  min={minPurchase}
+                  max={maxPurchase}
                 />
-                <label
-                  htmlFor="consent"
-                  className="text-sm text-text-muted leading-relaxed cursor-pointer"
-                >
-                  I give my full consent for my VUSD to be utilized as the
-                  staking currency for this investment pool.
-                </label>
-              </div>
 
-              <Button
-                onClick={handleConfirm}
-                disabled={
-                  !consent ||
-                  !amount ||
-                  !amountIsValid ||
-                  isJoining ||
-                  tokenLoading
-                }
-                size="lg"
-                loading={isJoining}
-                className={`w-full rounded-2xl h-14 text-lg font-medium ${
-                  hasInsufficientBalance
-                    ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-                    : ""
-                }`}
-              >
-                {buttonText}
-              </Button>
-            </div>
-          )}
-        </div>
-      </DrawerContent>
-    </Drawer>
+                <p className="text-xs text-text-muted text-center">
+                  Minimum purchase:{" "}
+                  <span className="text-text-primary font-medium">
+                    {minPurchase.toFixed(2)} VUSD
+                  </span>{" "}
+                  | Maximum purchase:{" "}
+                  <span className="text-text-primary font-medium">
+                    {maxPurchase.toFixed(2)} VUSD
+                  </span>
+                </p>
+
+                <div className="space-y-3">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-text-secondary">
+                      You are investing:
+                    </span>
+                    <span className="text-xl font-semibold text-text-primary">
+                      {parseFloat(amount || "0").toFixed(2)} VUSD
+                    </span>
+                  </div>
+
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-text-secondary">Into Pool for:</span>
+                    <span className="text-xl font-semibold text-text-primary">
+                      Assets {assetId}
+                    </span>
+                  </div>
+
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-text-secondary">Duration:</span>
+                    <span className="text-xl font-semibold text-text-primary">
+                      {duration} Days
+                    </span>
+                  </div>
+
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-text-secondary">
+                      Estimated Earnings:
+                    </span>
+                    <span className="text-xl font-semibold text-text-primary">
+                      {estimatedEarnings} VUSD
+                    </span>
+                    <span className="text-success font-medium">{apy}%</span>
+                  </div>
+                </div>
+
+                <div className="h-px bg-drawer-border" />
+
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="consent"
+                    checked={consent}
+                    onCheckedChange={(checked) =>
+                      setConsent(checked as boolean)
+                    }
+                    className="mt-1 border-drawer-border data-[state=checked]:bg-indigo data-[state=checked]:border-indigo"
+                  />
+                  <label
+                    htmlFor="consent"
+                    className="text-sm text-text-muted leading-relaxed cursor-pointer"
+                  >
+                    I give my full consent for my VUSD to be utilized as the
+                    staking currency for this investment pool.
+                  </label>
+                </div>
+
+                <Button
+                  onClick={handleConfirm}
+                  disabled={
+                    !consent ||
+                    !amount ||
+                    !amountIsValid ||
+                    isJoining ||
+                    tokenLoading
+                  }
+                  size="lg"
+                  loading={isJoining}
+                  className={`w-full rounded-2xl h-14 text-lg font-medium ${
+                    hasInsufficientBalance
+                      ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                      : ""
+                  }`}
+                >
+                  {buttonText}
+                </Button>
+              </div>
+            )}
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      {/* Render the success modal */}
+      {investmentSuccessData && (
+        <InvestmentSuccessModal
+          open={!!investmentSuccessData}
+          amount={investmentSuccessData.amount}
+          assetId={investmentSuccessData.assetId}
+          onContinue={handleContinueInvesting}
+          onViewPortfolio={handleViewPortfolio}
+        />
+      )}
+    </>
   );
 }

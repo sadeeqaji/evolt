@@ -3,7 +3,7 @@ import AssetTabs from "@evolt/components/features/dashboard/AssetManagementTabs"
 import { BalanceCard } from "@evolt/components/features/dashboard/BalanceCard";
 import { InvestmentCard } from "@evolt/components/features/dashboard/InvestmentCard";
 import { InvestmentDrawer } from "@evolt/components/features/dashboard/InvestmentDrawer";
-import { InvoiceCard } from "@evolt/components/features/dashboard/InvoiceDetailCard";
+import { InvoiceCard } from "@evolt/components/features/dashboard/AssetDetailCard";
 import { PoolCard } from "@evolt/components/features/dashboard/PoolCard";
 import { WithDrawCard } from "@evolt/components/features/dashboard/StackingCard";
 import StartInvestings from "@evolt/components/features/dashboard/StartInvesting";

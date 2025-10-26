@@ -17,10 +17,18 @@ interface JoinPoolParams {
   assetId: string;
 }
 
+// Data for the success modal
+interface InvestmentSuccessData {
+  amount: number;
+  assetId: string;
+}
+
 interface UseJoinPoolResult {
   loading: boolean;
   error: string | null;
   joinPool: (params: JoinPoolParams) => Promise<void>;
+  investmentSuccessData: InvestmentSuccessData | null; // New state
+  clearInvestmentSuccess: () => void; // New function
 }
 
 const VUSD_TOKEN_ID = "0.0.7029847";
@@ -30,7 +38,14 @@ const VUSD_DECIMALS = 6;
 export function useJoinPool(): UseJoinPoolResult {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // New state for success modal
+  const [investmentSuccessData, setInvestmentSuccessData] =
+    useState<InvestmentSuccessData | null>(null);
   const { sdk } = useHWBridge();
+
+  const clearInvestmentSuccess = () => {
+    setInvestmentSuccessData(null);
+  };
 
   const joinPool = useCallback(
     async (params: JoinPoolParams) => {
@@ -55,6 +70,7 @@ export function useJoinPool(): UseJoinPoolResult {
       try {
         setLoading(true);
         setError(null);
+        clearInvestmentSuccess(); // Clear previous success data
 
         const transferTx = new TransferTransaction()
           .addTokenTransfer(
@@ -94,10 +110,14 @@ export function useJoinPool(): UseJoinPoolResult {
         });
 
         console.log("Investment recorded:", investmentResponse.data);
-        toast.success(
-          investmentResponse.data?.message ||
-          "Successfully joined capital pool!"
-        );
+
+        // Set success data for modal instead of just toasting
+        setInvestmentSuccessData({ amount, assetId });
+
+        // toast.success(
+        //   investmentResponse.data?.message ||
+        //   "Successfully joined capital pool!"
+        // );
       } catch (err: any) {
         console.error("Join Pool failed:", err);
 
@@ -120,5 +140,11 @@ export function useJoinPool(): UseJoinPoolResult {
     [sdk]
   );
 
-  return { loading, error, joinPool };
+  return {
+    loading,
+    error,
+    joinPool,
+    investmentSuccessData,
+    clearInvestmentSuccess,
+  };
 }

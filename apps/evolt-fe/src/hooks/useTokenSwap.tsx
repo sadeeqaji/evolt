@@ -47,11 +47,6 @@ export function useTokenSwap(): UseTokenSwapResult {
           treasuryAccountId,
           convertedAmount
         )
-        // .addTokenTransfer(
-        //   TokenId.fromString("0.0.7029847"),
-        //   userAccountId,
-        //   amount
-        // )
         .setTransactionId(TransactionId.generate(userAccountId));
 
       try {

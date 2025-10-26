@@ -3,7 +3,7 @@
 import React from "react";
 import { BackButton } from "@evolt/components/common/BackButton";
 import { Button } from "@evolt/components/ui/button";
-import { InvoiceCard } from "@evolt/components/features/dashboard/InvoiceDetailCard";
+import { InvoiceCard } from "@evolt/components/features/dashboard/AssetDetailCard";
 import { InvestmentDrawer } from "@evolt/components/features/dashboard/InvestmentDrawer";
 import { usePoolDetails } from "@evolt/app/(dapp)/pools/api";
 import { StatusDisplay } from "@evolt/components/common/StatusDisplay";
@@ -30,8 +30,8 @@ function hashscanTxUrl(
 ) {
   return hcsTxId
     ? `https://hashscan.io/${network}/transaction/${encodeURIComponent(
-      hcsTxId
-    )}`
+        hcsTxId
+      )}`
     : "#";
 }
 
@@ -93,7 +93,7 @@ export default function PoolDetailClient({ poolId }: PoolDetailClientProps) {
         }
         numberOfStakers={data.totalInvestors ?? data.stakerCountOnChain ?? 0}
         expectedAPY={(data.yieldRate ?? 0) * 100}
-        amountFunded={data.amount ?? 0}
+        amountFunded={data.fundedAmount ?? 0}
         currency={data.currency ?? "USDC"}
         duration={data.durationInDays ?? 0}
         durationUnit="days"

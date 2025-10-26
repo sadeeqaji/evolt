@@ -158,16 +158,13 @@ export const InvoiceCard = ({
 
       {/* Verification Section */}
       <div className="mb-6">
-        <p className="text-sm text-invoice-text-muted mb-2">
-          Invoice Verified By :
-        </p>
+        <p className="text-sm text-invoice-text-muted mb-2">Verified By :</p>
         <div className="flex items-center gap-2 mb-1">
           <p className="text-xl sm:text-2xl font-bold text-invoice-text">
             {verifiedBy}
           </p>
           <BadgeCheck />
         </div>
-        <p className="text-sm text-invoice-text-muted">({verifierTitle})</p>
       </div>
 
       {/* On-Chain Verification */}
