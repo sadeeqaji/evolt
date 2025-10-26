@@ -1,5 +1,5 @@
 import { BusinessModel, BusinessDoc } from "./business.model.js";
-import { AzureUtil } from "../util/azure.util.js";
+import { AzureUtil } from "../util/util.azure.js";
 import { UserModel } from "../user/user.model.js";
 
 class BusinessService {

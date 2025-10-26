@@ -1,4 +1,4 @@
-import { AzureUtil } from "../util/azure.util.js";
+import { AzureUtil } from "../util/util.azure.js";
 import UtilService from "../util/util.service.js";
 import businessService from "../business/business.service.js";
 import corporateService from "../corporate/corporate.service.js";

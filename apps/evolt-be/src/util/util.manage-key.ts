@@ -1,5 +1,5 @@
 import { PrivateKey } from "@hashgraph/sdk";
-import { getCrypto, secretClient } from "./azure-key-vault.util.js";
+import { getCrypto, secretClient } from "./util.azure-key-vault.js";
 
 const SECRET_PREFIX = "hedera-user-key-";
 

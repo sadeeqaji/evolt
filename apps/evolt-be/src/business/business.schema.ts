@@ -3,7 +3,7 @@ import { FastifySchema } from "fastify";
 export const OnboardBusinessSchema: FastifySchema = {
 
     description: "Onboard business (KYB)",
-    tags: ["Business"],
+    tags: ["business"],
     consumes: ["multipart/form-data"],
 }
 
