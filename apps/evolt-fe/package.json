@@ -6,6 +6,7 @@
     "dev": "next dev -p 2020",
     "build": "next build",
     "start": "next start",
+    "transfer:usdc": "tsx src/scripts/transfer-usdc.ts",
     "lint": "eslint"
   },
   "overrides": {
