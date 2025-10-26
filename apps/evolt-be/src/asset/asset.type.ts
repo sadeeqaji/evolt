@@ -77,7 +77,7 @@ export interface AssetDoc extends Document {
     escrowContractId?: string;
     escrowEvm?: string;
     hcsTxId?: string;
-
+    symbol?: string;
     totalTarget?: number;
     minInvestment?: number;
     maxInvestment?: number;
