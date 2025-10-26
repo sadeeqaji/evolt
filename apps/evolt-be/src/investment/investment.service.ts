@@ -328,6 +328,9 @@ class InvestmentService {
 
         return { settled };
     }
+
+
+
 }
 
 export default new InvestmentService();
