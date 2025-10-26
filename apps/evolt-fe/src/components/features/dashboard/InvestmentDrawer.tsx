@@ -177,7 +177,7 @@ export function InvestmentDrawer({
   return (
     <Drawer open={showContent || forceOpen} onOpenChange={onOpenChange}>
       <DrawerContent className="bg-drawer-bg border-drawer-border bg-black">
-        <div className="mx-auto w-full max-w-md">
+        <div className="mx-auto w-full max-w-md overflow-y-auto overflow-x-hidden max-h-[90vh]">
           <DrawerHeader className="pt-8">
             <div className="mx-auto mb-2 h-1 w-16 rounded-full bg-text-muted/40" />
             <DrawerTitle className="text-center text-2xl font-semibold text-text-primary">
@@ -226,7 +226,7 @@ export function InvestmentDrawer({
                 <div className="flex items-baseline gap-2">
                   <span className="text-text-secondary">Into Pool for:</span>
                   <span className="text-xl font-semibold text-text-primary">
-                      Assets {assetId}
+                    Assets {assetId}
                   </span>
                 </div>
 
@@ -277,10 +277,11 @@ export function InvestmentDrawer({
                 }
                 size="lg"
                 loading={isJoining}
-                className={`w-full rounded-2xl h-14 text-lg font-medium ${hasInsufficientBalance
-                  ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-                  : ""
-                  }`}
+                className={`w-full rounded-2xl h-14 text-lg font-medium ${
+                  hasInsufficientBalance
+                    ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                    : ""
+                }`}
               >
                 {buttonText}
               </Button>

@@ -1,5 +1,8 @@
+"use client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useHWBridge } from "@evolt/components/common/HWBridgeClientProvider";
+import { TokenAssociateTransaction, AccountId, TokenId } from "@hashgraph/sdk";
+import { transactionToBase64String } from "@evolt/lib/utils";
 
 interface UseTokenAssociationResult {
   isTokenAssociated: boolean | null;
@@ -36,8 +39,17 @@ export function useTokenAssociation(
     mutationFn: async () => {
       if (!sdk || !accountId || !tokenId)
         throw new Error("SDK, AccountId, or TokenId missing");
+      // console.log({ accountId, tokenId });
+      // await sdk.associateTokenToAccount(accountId, tokenId);
 
-      await sdk.associateTokenToAccount(accountId, tokenId);
+      const transaction = new TokenAssociateTransaction()
+        .setAccountId(AccountId.fromString(accountId))
+        .setTokenIds([TokenId.fromString(tokenId)]);
+
+      await sdk?.dAppConnector.signAndExecuteTransaction({
+        signerAccountId: accountId,
+        transactionList: transactionToBase64String(transaction),
+      });
     },
     onSuccess: async () => {
       console.log("Token associated");

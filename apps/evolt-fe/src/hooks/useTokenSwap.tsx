@@ -66,15 +66,12 @@ export function useTokenSwap(): UseTokenSwapResult {
           amount,
           txId: trans?.transactionId,
         });
-
       } catch (hederaErr) {
         console.warn(
           "Hedera transaction failed, proceeding anyway:",
           hederaErr
         );
       }
-
-
 
       setSuccess(true);
     } catch (err: any) {
