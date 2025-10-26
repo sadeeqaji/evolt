@@ -14,7 +14,7 @@ interface JoinPoolParams {
   poolId: string;
   amount: number;
   userAccountId: string;
-  invoiceNumber: string;
+  assetId: string;
 }
 
 interface UseJoinPoolResult {
@@ -34,7 +34,7 @@ export function useJoinPool(): UseJoinPoolResult {
 
   const joinPool = useCallback(
     async (params: JoinPoolParams) => {
-      const { poolId, userAccountId, amount, invoiceNumber } = params;
+      const { poolId, userAccountId, amount, assetId } = params;
 
       const vusdUnits = Math.round(Number(amount) * 10 ** VUSD_DECIMALS);
 
@@ -67,7 +67,7 @@ export function useJoinPool(): UseJoinPoolResult {
             ESCROW_ACCOUNT_ID!,
             vusdUnits
           )
-          .setTransactionMemo(`Deposit to Escrow for Invoice ${invoiceNumber}`)
+          .setTransactionMemo(`Deposit to Escrow for Asset ${assetId}`)
           .setTransactionId(
             TransactionId.generate(AccountId.fromString(userAccountId))
           );
@@ -83,20 +83,20 @@ export function useJoinPool(): UseJoinPoolResult {
           });
 
         toast.success("VUSD sent to Escrow ✅", {
-          description: `${amount} VUSD staked for Invoice ${invoiceNumber}`,
+          description: `${amount} VUSD staked for Asset ${assetId}`,
         });
 
-        toast.info("Recording investment and receiving invoice token...");
+        toast.info("Recording investment and receiving asset token...");
 
         const investmentResponse = await apiClient.post("/investment", {
-          invoiceId: invoiceNumber,
+          assetId,
           txId: hederaResult.transactionId,
         });
 
         console.log("Investment recorded:", investmentResponse.data);
         toast.success(
           investmentResponse.data?.message ||
-            "Successfully joined capital pool!"
+          "Successfully joined capital pool!"
         );
       } catch (err: any) {
         console.error("Join Pool failed:", err);

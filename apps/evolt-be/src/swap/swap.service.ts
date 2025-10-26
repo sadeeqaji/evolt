@@ -45,20 +45,44 @@ class SwapService {
         to: string;
         expectedUnits: number;
     }) {
-        console.log(expectedUnits, 'expectedUnits')
         const normalizedTxId = normalizeTxId(txId);
         const url = `${MIRROR}/v1/transactions/${encodeURIComponent(normalizedTxId)}`;
-        const { data } = await axios.get(url);
-        console.log(data, 'from mirror node')
-        const tx = Array.isArray(data.transactions) ? data.transactions[0] : data;
-        if (!tx || tx.result !== "SUCCESS") throw new Error("Transaction not confirmed");
 
-        const transfers = (tx.token_transfers || []).filter((t: any) => t.token_id === tokenId);
-        const debit = transfers.find((t: any) => t.account === from && Number(t.amount) === -expectedUnits);
-        const credit = transfers.find((t: any) => t.account === to && Number(t.amount) === expectedUnits);
-        if (!debit || !credit) throw new Error("Transfer mismatch (amount or accounts)");
+        try {
+            const { data } = await axios.get(url);
+            const tx = Array.isArray(data.transactions) ? data.transactions[0] : data;
 
-        return true;
+            if (!tx) {
+                return { ok: false, code: "TX_NOT_FOUND", message: "Transaction not found on mirror node yet." };
+            }
+
+            if (tx.result !== "SUCCESS") {
+                return { ok: false, code: "TX_NOT_CONFIRMED", message: `Transaction not confirmed: ${tx.result}` };
+            }
+
+            const transfers = (tx.token_transfers || []).filter(
+                (t: any) => t.token_id === tokenId
+            );
+
+            if (!transfers.length) {
+                return { ok: false, code: "NO_TOKEN_TRANSFER", message: "Transaction does not involve expected token." };
+            }
+
+            const debit = transfers.find((t: any) => t.account === from && Number(t.amount) === -expectedUnits);
+            const credit = transfers.find((t: any) => t.account === to && Number(t.amount) === expectedUnits);
+
+            if (!debit || !credit) {
+                return { ok: false, code: "TRANSFER_MISMATCH", message: "Transfer amount or accounts do not match expected." };
+            }
+
+            return { ok: true };
+
+        } catch (err: any) {
+            if (err?.response?.status === 404) {
+                return { ok: false, code: "TX_NOT_FOUND", message: "Transaction not found (404)." };
+            }
+            return { ok: false, code: "MIRROR_ERROR", message: "Error communicating with mirror node.", detail: err.message };
+        }
     }
 
     private async transferOrMintVUSD({ to, amount }: { to: string; amount: number }) {
@@ -116,14 +140,14 @@ class SwapService {
         const tokenId = token === "USDC" ? USDC_TOKEN_ID : USDT_TOKEN_ID;
         const expected = toUnits(amount, token);
 
-        await this.verifyTransfer({
+        const res = await this.verifyTransfer({
             txId,
             tokenId,
             from: investorAccountId,
             to: TREASURY,
             expectedUnits: expected,
         });
-
+        console.log(res)
         const result = await this.transferOrMintVUSD({ to: investorAccountId, amount });
         return { success: true, direction: "deposit", data: result };
     }

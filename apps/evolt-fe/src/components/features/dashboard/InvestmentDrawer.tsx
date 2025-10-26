@@ -22,7 +22,7 @@ interface InvestmentDrawerProps {
   minPurchase: number;
   maxPurchase: number;
   totalTarget: number;
-  invoiceNumber: string;
+  assetId: string;
   duration: number;
   apy: number;
 }
@@ -33,7 +33,7 @@ export function InvestmentDrawer({
   tokenId,
   minPurchase,
   maxPurchase,
-  invoiceNumber,
+  assetId,
   apy,
   duration,
 }: InvestmentDrawerProps) {
@@ -130,7 +130,7 @@ export function InvestmentDrawer({
         poolId: tokenId,
         userAccountId: accountId,
         amount: stakeAmount,
-        invoiceNumber: invoiceNumber,
+        assetId,
       });
 
       onOpenChange(false);
@@ -226,7 +226,7 @@ export function InvestmentDrawer({
                 <div className="flex items-baseline gap-2">
                   <span className="text-text-secondary">Into Pool for:</span>
                   <span className="text-xl font-semibold text-text-primary">
-                    Invoice {invoiceNumber}
+                      Assets {assetId}
                   </span>
                 </div>
 
@@ -277,11 +277,10 @@ export function InvestmentDrawer({
                 }
                 size="lg"
                 loading={isJoining}
-                className={`w-full rounded-2xl h-14 text-lg font-medium ${
-                  hasInsufficientBalance
-                    ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-                    : ""
-                }`}
+                className={`w-full rounded-2xl h-14 text-lg font-medium ${hasInsufficientBalance
+                  ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                  : ""
+                  }`}
               >
                 {buttonText}
               </Button>

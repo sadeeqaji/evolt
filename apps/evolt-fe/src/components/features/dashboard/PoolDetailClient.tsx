@@ -118,7 +118,7 @@ export default function PoolDetailClient({ poolId }: PoolDetailClientProps) {
         open={drawerOpen}
         duration={data.durationInDays ?? 0}
         onOpenChange={setDrawerOpen}
-        invoiceNumber={data.invoiceNumber ?? data._id}
+        assetId={data._id}
         apy={(data.yieldRate ?? 0) * 100}
         tokenId={data.tokenId ?? undefined}
         minPurchase={data.minInvestment ?? 10}

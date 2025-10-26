@@ -26,6 +26,7 @@ const HCS_TOPIC_ID = process.env.HCS_TOPIC_ID!;
 const HEDERA_EVM_OPERATOR_ID = process.env.HEDERA_EVM_OPERATOR_ID!;
 const HEDERA_EVM_OPERATOR_PRIVATE_KEY = process.env.HEDERA_EVM_OPERATOR_PRIVATE_KEY!;
 const MIRROR = process.env.HEDERA_MIRROR_NODE_URL!;
+const VOLT_ESCROW_CONTRACT_ID = process.env.VOLT_ESCROW_CONTRACT_ID
 const VUSD_TOKEN_ID = process.env.HEDERA_VUSD_TOKEN_ID!;
 const VUSD_DECIMALS = 6;
 const FRACTION_SIZE = 10; // 1 iToken = 10 vUSD
@@ -165,6 +166,7 @@ async function getEscrowForToken(tokenIdOrEvm: string) {
     return { escrowEvm, tokenEvm };
 }
 
+/* ===== SERVICE ===== */
 class InvestmentService {
     async investFromDeposit(
         { accountId, investorId }: { accountId: string; investorId: string },
@@ -188,7 +190,7 @@ class InvestmentService {
         const { units: vusdUnits, vusdAmount } = extractVusdAmountFromTx(
             mirrorTx,
             accountId,
-            VUSD_TOKEN_ID,
+            VOLT_ESCROW_CONTRACT_ID!,
             VUSD_TOKEN_ID,
             VUSD_DECIMALS
         );
@@ -232,6 +234,7 @@ class InvestmentService {
         const investment = await InvestmentModel.create({
             investorId,
             investorEvm,
+            assetId,
             tokenId: asset.tokenId,
             tokenEvm,
             assetType: asset.assetType,
@@ -244,24 +247,6 @@ class InvestmentService {
             txId: tx2.hash,
             depositTxId: normalizeTxId(txId),
             maturedAt,
-        });
-
-        const newFundedAmount = funded + vusdAmount;
-        const fundingProgress =
-            totalTarget > 0 ? Math.min((newFundedAmount / totalTarget) * 100, 100) : 0;
-
-        let fundingStatus: "funding" | "funded" | "fully_funded";
-        if (fundingProgress >= 100) {
-            fundingStatus = "fully_funded";
-        } else if (fundingProgress >= 1) {
-            fundingStatus = "funded";
-        } else {
-            fundingStatus = "funding";
-        }
-
-        await AssetModel.findByIdAndUpdate(asset._id, {
-            fundedAmount: newFundedAmount,
-            fundingStatus,
         });
 
         await new TopicMessageSubmitTransaction()
