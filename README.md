@@ -21,7 +21,7 @@ evolt/
 | **Frontend**         | Next.js 15, Tailwind CSS, React Query, WalletConnect |
 | **Backend**          | Fastify 5, TypeScript, Hedera SDK                    |
 | **Database**         | MongoDB (Atlas or local)                             |
-| **Queue**            | BullMQ + Redis                                       |
+| **Queue**            | Redis                                       |
 | **Storage**          | Azure Blob Storage + Key Vault                       |
 | **Messaging**        | WhatsApp Cloud API                                   |
 | **AI (optional)**    | OpenAI GPT-4o / GPT-5                                |
