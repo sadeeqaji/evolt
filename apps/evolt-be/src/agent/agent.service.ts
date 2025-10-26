@@ -22,7 +22,7 @@ const chatHistoryStore = new Map<string, (HumanMessage | AIMessage)[]>();
 
 export class AgentService {
   private agent: any;
-  private tools: any[];
+  private tools!: any[];
 
   constructor(private app: FastifyInstance) {
     this.initAgent();
@@ -57,15 +57,13 @@ export class AgentService {
 
     this.tools = [...stockTools, ...customTools];
 
-    /** 5️⃣ Define a contextual helper tool (optional example) */
-    const greetUserTool = tool(
+    const greetUserTool = tool<any, any, string>(
       ({ name }) => `Hello ${name}, how can I assist you with RWAs today?`,
       {
         name: 'greet_user',
         description: 'Greets the user politely and starts the conversation.',
-        schema: z.object({
-          name: z.string(),
-        }),
+        // 👇 cast schema to any to prevent infinite type expansion
+        schema: z.object({ name: z.string() }) as any,
       },
     );
 
@@ -73,8 +71,6 @@ export class AgentService {
     this.agent = createAgent({
       model: llm,
       tools: [...this.tools, greetUserTool],
-      prompt:
-        'You are Evolt, a polite and knowledgeable assistant for investing in Real-World Assets (RWAs) on Hedera. Always be concise, helpful, and user-friendly.',
     });
   }
 
