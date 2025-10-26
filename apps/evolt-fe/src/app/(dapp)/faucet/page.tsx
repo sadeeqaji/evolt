@@ -36,9 +36,9 @@ export default function FaucetPage() {
     mutationFn: async () => {
       if (!accountId) throw new Error("Wallet not connected.");
 
-      return apiClient.post("/faucet/request-usdc", {
+      return apiClient.post("/swap/faucet/usdc", {
         accountId,
-        tokenId: usdcTokenId,
+        amount: 1000,
       });
     },
     onSuccess: (res: any) => {
