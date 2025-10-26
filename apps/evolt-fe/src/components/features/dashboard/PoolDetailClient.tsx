@@ -93,7 +93,7 @@ export default function PoolDetailClient({ poolId }: PoolDetailClientProps) {
         }
         numberOfStakers={data.totalInvestors ?? data.stakerCountOnChain ?? 0}
         expectedAPY={(data.yieldRate ?? 0) * 100}
-        amountFunded={data.amount ?? 0}
+        amountFunded={data.fundedAmount ?? 0}
         currency={data.currency ?? "USDC"}
         duration={data.durationInDays ?? 0}
         durationUnit="days"
