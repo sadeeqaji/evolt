@@ -15,7 +15,7 @@ import {
 import { Label } from "@evolt/components/ui/label";
 import { Upload, Info, HardDrive, FileText, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import apiClient from "@evolt/lib/apiClient"; // Import apiClient
+import apiClient from "@evolt/lib/apiClient";
 
 const rwaCategories = [
   {
@@ -82,17 +82,16 @@ export default function NewListingPage() {
       formData.append("name", name);
       formData.append("symbol", symbol);
       formData.append("category", category);
-      formData.append("proof", proofOfOwnershipFile); // Key for the file
-
-      // **IMPORTANT:** Replace '/listing/create' with your actual backend endpoint
-      const response = await apiClient.post("/listing/create", formData, {
+      formData.append("files", proofOfOwnershipFile);
+      formData.append("corporateId", "68f6f0f85a2f445265e64cc0")
+      const response = await apiClient.post("/asset/", formData, {
         headers: {
           // Axios usually sets this automatically for FormData,
           // but explicitly setting it can sometimes help.
-          // 'Content-Type': 'multipart/form-data',
+          'Content-Type': 'multipart/form-data',
         },
       });
-
+      console.log(response, 'response')
       toast.success("Contract published successfully!", { id: loadingToastId });
       // Optional: Reset form or redirect
       // setName(''); setSymbol(''); setCategory(''); setProofOfOwnershipFile(null);
@@ -120,9 +119,8 @@ export default function NewListingPage() {
             <Info className="w-3.5 h-3.5 text-muted-foreground" />
           </Label>
           <div
-            className={`relative flex flex-col items-center justify-center w-full h-80 rounded-lg border-2 border-dashed border-border bg-muted/20 text-center p-6 cursor-pointer hover:border-primary transition-colors ${
-              proofOfOwnershipFile ? "border-primary bg-primary/10" : ""
-            }`}
+            className={`relative flex flex-col items-center justify-center w-full h-80 rounded-lg border-2 border-dashed border-border bg-muted/20 text-center p-6 cursor-pointer hover:border-primary transition-colors ${proofOfOwnershipFile ? "border-primary bg-primary/10" : ""
+              }`}
             onClick={() => document.getElementById("proof-upload")?.click()}
           >
             <input

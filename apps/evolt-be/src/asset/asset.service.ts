@@ -23,6 +23,7 @@ class AssetService {
             assetType: normalize(data.assetType),
             title: normalize(data.title),
             description: normalize(data.description),
+            symbol: normalize(data.symbol),
             amount: normalize(data.amount),
             currency: normalize(data.currency),
             yieldRate: normalize(data.yieldRate),
@@ -66,6 +67,7 @@ class AssetService {
                 normalizedData.expiryDate ||
                 new Date(Date.now() + 90 * 86400000),
             blobUrl,
+            symbol: normalizedData.symbol,
             status: "pending",
             tokenName,
         };

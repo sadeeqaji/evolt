@@ -31,6 +31,7 @@ const baseAssetSchema = new mongoose.Schema<AssetDoc>(
         tokenName: String,
         tokenId: String,
         tokenEvm: String,
+        symbol: String,
         escrowContractId: String,
         escrowEvm: String,
         minInvestment: { type: Number, default: 10 },

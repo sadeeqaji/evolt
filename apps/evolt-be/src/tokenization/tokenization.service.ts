@@ -50,8 +50,8 @@ class TokenizationService {
         const metaString = compactTokenMeta(asset);
 
         const createTx = await new TokenCreateTransaction()
-            .setTokenName(`${asset.assetType}-${asset.tokenName}`)
-            .setTokenSymbol(`AST${asset._id.toString().slice(-4)}`)
+            .setTokenName(asset.title)
+            .setTokenSymbol(asset.symbol)
             .setTokenType(TokenType.FungibleCommon)
             .setTreasuryAccountId(TREASURY_ID)
             .setInitialSupply(totalTokens)
@@ -92,7 +92,9 @@ class TokenizationService {
             .setTopicId(HCS_TOPIC_ID)
             .setMessage(
                 JSON.stringify({
-                    event: "INVOICE_TOKENIZED",
+                    name: asset.title,
+                    symbol: asset.symbol,
+                    event: "ASSET_TOKENIZED",
                     assetId: asset._id,
                     tokenId,
                     tokenEvm,
