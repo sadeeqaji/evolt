@@ -85,6 +85,17 @@ class SwapService {
         }
     }
 
+    private async isAssociated(accountId: string, tokenId: string): Promise<boolean> {
+        try {
+            const { data } = await axios.get(`${MIRROR}/v1/accounts/${accountId}`);
+            const tokens = data?.balance?.tokens ?? [];
+            return tokens.some((t: any) => t.token_id === tokenId);
+        } catch {
+            return false;
+        }
+    }
+
+
     private async transferOrMintVUSD({ to, amount }: { to: string; amount: number }) {
         const vusdUnits = toUnits(amount, "VUSD");
         try {
@@ -205,6 +216,62 @@ class SwapService {
         console.log(tx.transactionId.toString())
         return { success: true, direction: "withdraw", txId: tx.transactionId.toString() };
     }
+
+
+    async faucetUSDC({
+        accountId,
+        amount,
+    }: {
+        accountId: string;
+        amount: number;
+    }) {
+        if (!Number.isFinite(amount) || amount <= 0) throw new Error("Invalid amount");
+
+        // Ensure user is associated to USDC token (or auto-association enabled)
+        const associated = await this.isAssociated(accountId, USDC_TOKEN_ID);
+        if (!associated) {
+            throw new Error(
+                `Account ${accountId} is not associated with USDC (${USDC_TOKEN_ID}). ` +
+                `Please associate the token (or enable auto-association) and try again.`
+            );
+        }
+
+        const units = toUnits(amount, "USDC");
+
+        try {
+            const tx = await new TransferTransaction()
+                .addTokenTransfer(TOKENS.USDC, TREASURY, -units)
+                .addTokenTransfer(TOKENS.USDC, accountId, units)
+                .setTransactionMemo(`USDC faucet ${amount} → ${accountId}`)
+                .execute(client);
+
+            const rcpt: TransactionReceipt = await tx.getReceipt(client);
+            return {
+                success: true,
+                minted: false,
+                txId: tx.transactionId.toString(),
+                status: rcpt.status.toString(),
+            };
+        } catch (e: any) {
+            const mint = await new TokenMintTransaction().setTokenId(TOKENS.USDC).setAmount(units).execute(client);
+            await mint.getReceipt(client);
+
+            const pay = await new TransferTransaction()
+                .addTokenTransfer(TOKENS.USDC, TREASURY, -units)
+                .addTokenTransfer(TOKENS.USDC, accountId, units)
+                .setTransactionMemo(`USDC faucet ${amount} → ${accountId}`)
+                .execute(client);
+
+            const payRcpt: TransactionReceipt = await pay.getReceipt(client);
+            return {
+                success: true,
+                minted: true,
+                txId: pay.transactionId.toString(),
+                status: payRcpt.status.toString(),
+            };
+        }
+    }
+
 }
 
 export default new SwapService();
