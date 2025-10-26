@@ -30,33 +30,6 @@ evolt/
 ---
 
 
-+-----------------------------------+             +-----------------------------------+
-|           Frontend UI             |             |          Smart Contracts          |
-|    (Next.js + WalletConnect)      |             |        (on Hedera EVM)            |
-+-----------------------------------+             +-----------------------------------+
-              | 1. REST/WS calls                                ^ 3. Signed Tx via WalletConnect
-              v                                                  |
-+-----------------------------------+                           |
-|             Backend               |                           |
-|  Fastify API + Hedera SDK logic   |---------------------------+
-+-----------------------------------+ 2. Server‑side Hedera calls|
-              |                                                   |
-              v                                                   |
-+-----------------------------------+                            |
-| Hedera Network (Consensus & Token)|----------------------------+
-|      Services (Mainnet/Testnet)   |      4. State & events     |
-+-----------------------------------+                            |
-              |                                                   |
-              v                                                   |
-+-----------------------------------+                            |
-|         Mirror Nodes (Read‑only)  |----------------------------+
-|  (transaction receipts & queries) |      5. Mirror queries     |
-+-----------------------------------+                            |
-              ^                                                   |
-              | 6. Optional Mirror API calls                    |
-+-----------------------------------+                            |
-|           Frontend UI             | <---------------------------+
-+-----------------------------------+
 
 
 ## 🧠 Setup Instructions
