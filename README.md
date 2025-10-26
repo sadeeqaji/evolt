@@ -1,6 +1,6 @@
 # Evolt Monorepo: Fractionalized RWA on Hedera for the World 🌐
 
-> **Evolt** is a **blockchain-powered investment platform** dedicated to democratizing access to **Real World Assets (RWA)**. We enable users to own fractionalized shares of assets—including **real estate, creator IP, agriculture, and private credit**—directly via **WhatsApp** or a dedicated web dApp.
+> **Evolt** is a **blockchain-powered investment platform** dedicated to democratizing access to **Real World Assets (RWA)**. We enable users to own fractionalized shares of assets—including **real estate, creator IP, agriculture, and private credit** directly via **WhatsApp** or a dedicated web dApp.
 >
 > **Built for the Hedera Hackathon**, this monorepo consolidates our core applications:
 >
