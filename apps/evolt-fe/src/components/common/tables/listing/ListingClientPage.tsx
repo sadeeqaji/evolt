@@ -26,13 +26,13 @@ import { ChevronDown, Plus } from "lucide-react";
 import Image from "next/image";
 import { Collection } from "./schema";
 import { columns } from "./columns";
+import { useRouter } from "next/navigation";
 
-// This is the component for the empty state shown in the screenshot
 function EmptyState() {
+  const { push } = useRouter();
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center bg-black">
       <div className="p-4 bg-muted/50 rounded-lg mb-6">
-        {/* Re-using an existing image as a placeholder for the cat NFT */}
         <Image
           src="/startInvesting.png"
           alt="Launch NFTs"
@@ -41,19 +41,18 @@ function EmptyState() {
           className="object-contain"
         />
       </div>
-      <h3 className="text-2xl font-semibold mb-2">Launch your NFTs</h3>
+      <h3 className="text-2xl font-semibold mb-2">Launch your asset</h3>
       <p className="text-muted-foreground mb-6 max-w-xs">
         Create a Primary Drop or Open Collection to get started.
       </p>
-      <Button>Get Started</Button>
+      <Button onClick={() => push(`/listing/new`)}>Get Started</Button>
     </div>
   );
 }
 
 export default function ListingClientPage() {
-  // We use an empty array here to match the "0 Collections" screenshot
   const [collections, setCollections] = React.useState<Collection[]>([]);
-
+  const { push } = useRouter();
   const table = useReactTable({
     data: collections,
     columns,
@@ -62,12 +61,12 @@ export default function ListingClientPage() {
 
   return (
     <div className="mt-10 w-full max-w-6xl m-auto space-y-4 ">
-      {/* Header: "0 Collections" + Dropdown */}
       <div className="flex items-center justify-between px-1">
         <h2 className="text-lg font-medium text-foreground" />
 
         <div className="space-x-3.5">
           <Button
+            onClick={() => push(`/listing/new`)}
             size="lg"
             className="rounded-full shadow-lg h-10 px-6 bg-primary text-primary-foreground"
           >
@@ -118,7 +117,6 @@ export default function ListingClientPage() {
             ))}
           </TableHeader>
 
-          {/* Conditional Body */}
           <TableBody>
             {collections.length === 0 ? (
               <TableRow className="hover:bg-transparent">
