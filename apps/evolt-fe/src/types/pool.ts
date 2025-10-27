@@ -61,3 +61,40 @@ export interface PoolListParams {
   status?: PoolStatus;
   search?: string;
 }
+
+export type AssetStatus = "pending" | "verified" | "tokenized";
+
+export type AssetDoc = {
+  // Make sure this aligns with your Mongoose model structure
+  _id: string; // Ensure this is string if leaning from Mongoose
+  assetType?: string;
+  title?: string;
+  description?: string;
+  originatorId?: string; // or ObjectId if not leaning
+  corporateId?: string; // or ObjectId if not leaning
+  userId?: string; // or ObjectId if not leaning
+  amount?: number;
+  currency?: string;
+  yieldRate?: number;
+  durationDays?: number;
+  totalTarget?: number;
+  expiryDate?: string | Date | null;
+  status?: AssetStatus;
+  fundedAmount?: number;
+  fundingStatus?: string; // funding, funded, fully_funded
+  verifier?: string | null;
+  blobUrl?: string | null;
+  metadata?: any;
+  tokenName?: string;
+  tokenId?: string | null;
+  tokenEvm?: string | null;
+  symbol?: string;
+  escrowContractId?: string | null;
+  escrowEvm?: string | null;
+  minInvestment?: number;
+  maxInvestment?: number;
+  verifiedAt?: string | Date | null;
+  createdAt?: string | Date; // Ensure createdAt exists
+  updatedAt?: string | Date;
+  // Add any other fields used in columns
+};

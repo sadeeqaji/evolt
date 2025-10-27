@@ -5,7 +5,9 @@ import AssetTabs, {
 } from "@evolt/components/features/dashboard/AssetManagementTabs";
 import { BalanceCard } from "@evolt/components/features/dashboard/BalanceCard";
 import StartInvestings from "@evolt/components/features/dashboard/StartInvesting";
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { MarketplaceModal } from "@evolt/components/common/marketplace-modal";
+import Cookies from "js-cookie";
 
 const Tabs: TabConfig[] = [
   {
@@ -31,12 +33,31 @@ const Tabs: TabConfig[] = [
   },
 ];
 
+const MARKETPLACE_MODAL_COOKIE = "marketplaceModalShown";
+
 function Page() {
+  const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    const modalShown = Cookies.get(MARKETPLACE_MODAL_COOKIE);
+    if (!modalShown) {
+      setShowModal(true);
+    }
+  }, []);
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+
+    Cookies.set(MARKETPLACE_MODAL_COOKIE, "true", { expires: 1 });
+  };
+
   return (
     <div className="mt-10 w-full max-w-2xl m-auto space-y-5">
       <BalanceCard initialBalance={0.0} currency="vUSD" />
       <AssetTabs tabs={Tabs} />
       <StartInvestings />
+
+      {showModal && <MarketplaceModal onClose={handleCloseModal} />}
     </div>
   );
 }

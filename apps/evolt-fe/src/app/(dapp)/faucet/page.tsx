@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react"; // Import Suspense
 import { useHWBridge } from "@evolt/components/common/HWBridgeClientProvider";
 import { useTokenAssociation } from "@evolt/hooks/useTokenAssociation";
 import { useMutation } from "@tanstack/react-query";
@@ -20,6 +20,39 @@ import { toast } from "sonner";
 import Image from "next/image";
 
 const usdcTokenId = process.env.NEXT_PUBLIC_HEDERA_USDC_TOKEN_ID!;
+
+// Basic Loading Fallback Component
+function FaucetLoadingFallback() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <Card className="bg-card/50 border-border">
+        <CardHeader>
+          <div className="h-6 w-3/4 bg-muted rounded"></div>
+          <div className="h-4 w-full bg-muted rounded mt-2"></div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <div className="h-4 w-1/4 bg-muted rounded"></div>
+            <div className="flex items-center gap-2">
+              <div className="h-12 flex-1 bg-input/50 border border-input-border rounded-lg p-3"></div>
+              <div className="h-10 w-10 bg-muted rounded"></div>
+            </div>
+          </div>
+          <div className="h-10 w-full bg-muted rounded"></div>
+        </CardContent>
+      </Card>
+      <Card className="bg-card/50 border-border">
+        <CardHeader>
+          <div className="h-6 w-1/2 bg-muted rounded"></div>
+          <div className="h-4 w-3/4 bg-muted rounded mt-2"></div>
+        </CardHeader>
+        <CardContent>
+          <div className="h-12 w-full bg-muted rounded"></div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 export default function FaucetPage() {
   const { accountId } = useHWBridge();
@@ -76,6 +109,8 @@ export default function FaucetPage() {
       );
     }
 
+    // Note: The primary loading states are handled by the hooks (assocLoading, faucetMutation.isPending).
+    // Suspense here acts as a boundary for the component rendering itself or potential future async imports/resources.
     return (
       <div className="space-y-6">
         <Card className="bg-card/50 border-border">
@@ -197,7 +232,10 @@ export default function FaucetPage() {
           Get free tokens to test the Evolt platform.
         </p>
       </div>
-      {renderContent()}
+      {/* Wrap the main content area with Suspense */}
+      <Suspense fallback={<FaucetLoadingFallback />}>
+        {renderContent()}
+      </Suspense>
     </div>
   );
 }
