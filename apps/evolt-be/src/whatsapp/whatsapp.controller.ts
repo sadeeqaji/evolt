@@ -3,7 +3,7 @@ import axios from 'axios';
 // Remove unused service
 // import investorService from "../investor/investor.service.js";
 // import { WalletService } from "../wallet/wallet.service.js";
-import { AgentService } from '../agent/agent.service.js'; // Import the new service
+import { AgentService } from '../agent/agent.service.js';
 
 export class WhatsAppController {
   // private walletConnect: WalletService; // No longer needed here
