@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { type LucideIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 type TabLink = {
   id: string;
@@ -36,8 +37,12 @@ const AssetTabs: React.FC<HybridTabsProps> = ({ tabs, defaultTabId }) => {
     (tab) => tab.type === "tab" && tab.id === activeTabId
   );
 
+  const { prefetch } = useRouter();
   return (
-    <div className="flex items-center justify-center w-full">
+    <div
+      onMouseOver={() => prefetch("/assets")}
+      className="flex items-center justify-center w-full"
+    >
       <div className="w-full">
         <div className="bg-black rounded-full p-2 shadow-2xl border border-slate-800">
           <div className="flex items-center gap-1">

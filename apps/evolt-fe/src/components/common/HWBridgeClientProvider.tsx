@@ -43,7 +43,6 @@ export function HWBridgeClientProvider({
 
     async function init() {
       try {
-        // Dynamically import the hashinalsClient only on the client side
         const { getHashinalsSDK } = await import("@evolt/lib/hashinalsClient");
         const instance = await getHashinalsSDK();
 

@@ -52,18 +52,23 @@ const Header = () => {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-4 lg:gap-6">
-          <Link
-            href="/faucet"
-            className="text-sm font-medium text-gray-300 hover:text-white transition-colors"
-          >
-            Faucet
-          </Link>
-          <Link
-            href="/listing"
-            className="text-sm font-medium text-gray-300 hover:text-white transition-colors"
-          >
-            List an Asset
-          </Link>
+          {accountId && (
+            <Link
+              href="/faucet"
+              className="text-sm font-medium text-gray-300 hover:text-white transition-colors"
+            >
+              Faucet
+            </Link>
+          )}
+          {accountId && (
+            <Link
+              href="/listing"
+              prefetch={true}
+              className="text-sm font-medium text-gray-300 hover:text-white transition-colors"
+            >
+              List an Asset
+            </Link>
+          )}
         </nav>
 
         <div className="flex items-center gap-3">
@@ -85,14 +90,6 @@ const Header = () => {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleDisconnect}

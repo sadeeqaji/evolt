@@ -4,9 +4,9 @@ import { Button } from "@evolt/components/ui/button";
 import { useRouter } from "next/navigation";
 
 const StartInvestings = () => {
-  const { push } = useRouter();
+  const { push, prefetch } = useRouter();
   return (
-    <div className="relative group">
+    <div onMouseOver={() => prefetch("/pools")} className="relative group">
       <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 rounded-[1.5rem] opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-500" />
 
       <div className="relative bg-card border border-border rounded-[1.5rem] p-6 md:p-8 overflow-hidden transition-all duration-300 hover:border-primary/50">
