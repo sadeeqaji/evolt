@@ -34,7 +34,6 @@ class AssetController {
         try {
             const { id, verifier } = req.body as any;
             const asset = await AssetService.verifyAsset(id, verifier);
-            console.log('asset', asset)
             const tokenized = await TokenizationService.tokenizeAsset(asset);
 
             return reply.code(200).send({
@@ -43,7 +42,6 @@ class AssetController {
                 data: tokenized,
             });
         } catch (error: any) {
-            console.error("Verify asset error:", error);
             return reply.code(400).send({ success: false, message: error.message });
         }
     }
