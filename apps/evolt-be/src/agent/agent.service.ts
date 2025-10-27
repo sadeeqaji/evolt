@@ -17,7 +17,6 @@ import {
 } from './agent.tools.js';
 import InvestorService from '../investor/investor.service.js';
 
-// Temporary in-memory chat store (replace with Redis in production)
 const chatHistoryStore = new Map<string, (HumanMessage | AIMessage)[]>();
 
 const TREASURY_ID = process.env.HEDERA_OPERATOR_ID!;
@@ -26,14 +25,13 @@ const TREASURY_KEY = process.env.HEDERA_OPERATOR_KEY!;
 export class AgentService {
   private agent: any;
   private tools!: any[];
-  private ready: Promise<void>; // <-- ensure agent is ready
+  private ready: Promise<void>;
 
   constructor(private app: FastifyInstance) {
-    this.ready = this.initAgent(); // <-- await this in handleMessage
+    this.ready = this.initAgent();
   }
 
   private async initAgent() {
-    /** 1️⃣ Initialize LLM using the new unified API */
     const llm = await initChatModel('openai:gpt-4o-mini');
 
     const client = Client.forTestnet().setOperator(TREASURY_ID, TREASURY_KEY);
@@ -69,7 +67,7 @@ export class AgentService {
   }
 
   public async handleMessage(userId: string, input: string): Promise<string> {
-    await this.ready; // <-- make sure agent is initialized
+    await this.ready;
 
     const chat_history = chatHistoryStore.get(userId) || [];
 
@@ -84,12 +82,10 @@ Phone Number: ${userId}
 Hedera Account ID: ${userAccountId || 'Not yet connected'}
 `;
 
-    // invoke the agent
     const result = await this.agent.invoke({
       messages: [{ role: 'user', content: contextInput }],
     });
 
-    // extract final text safely
     const last = result?.messages?.[result.messages.length - 1];
     const content =
       typeof last?.content === 'string'
@@ -101,7 +97,6 @@ Hedera Account ID: ${userAccountId || 'Not yet connected'}
               .trim()
           : '';
 
-    // store history (use the real content)
     chat_history.push(new HumanMessage(input));
     chat_history.push(new AIMessage(content));
     chatHistoryStore.set(userId, chat_history);
