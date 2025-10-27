@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { initChatModel } from 'langchain/chat_models/universal';
 import { createAgent, tool } from 'langchain';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
-import { Client, PrivateKey } from '@hashgraph/sdk';
+import { Client } from '@hashgraph/sdk';
 import {
   HederaLangchainToolkit,
   coreQueriesPlugin,
@@ -14,6 +14,8 @@ import {
   createGetRwaAssetsTool,
   createGetPortfolioTool,
   createConnectWalletTool,
+  createWalletTool,
+  createAssociateTokenTool
 } from './agent.tools.js';
 import InvestorService from '../investor/investor.service.js';
 
@@ -56,9 +58,12 @@ export class AgentService {
 
     this.tools = [
       ...stockTools,
+      createWalletTool(),
       createGetRwaAssetsTool(),
       createGetPortfolioTool(),
       createConnectWalletTool(this.app),
+      createAssociateTokenTool(this.app),
+
     ];
     this.agent = createAgent({
       model: llm,
@@ -66,7 +71,7 @@ export class AgentService {
     });
   }
 
-  public async handleMessage(userId: string, input: string): Promise<string> {
+  public async handleMessage(userId: string, input: string, name: string): Promise<string> {
     await this.ready;
 
     const chat_history = chatHistoryStore.get(userId) || [];
@@ -75,11 +80,11 @@ export class AgentService {
       ?.accountId;
 
     const contextInput = `
-User Message: "${input}"
-
-[User Context]
-Phone Number: ${userId}
-Hedera Account ID: ${userAccountId || 'Not yet connected'}
+    User Message: "${input}"
+    name: ${name}
+    [User Context]
+    Phone Number: ${userId}
+    Hedera Account ID: ${userAccountId || 'Not yet connected'}
 `;
 
     const result = await this.agent.invoke({
@@ -92,9 +97,9 @@ Hedera Account ID: ${userAccountId || 'Not yet connected'}
         ? last.content
         : Array.isArray(last?.content)
           ? last.content
-              .map((p: any) => (p?.type === 'text' ? p.text : ''))
-              .join('')
-              .trim()
+            .map((p: any) => (p?.type === 'text' ? p.text : ''))
+            .join('')
+            .trim()
           : '';
 
     chat_history.push(new HumanMessage(input));

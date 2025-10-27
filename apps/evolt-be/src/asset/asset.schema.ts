@@ -292,3 +292,69 @@ export const GetAssetsByStatusSchema: FastifySchema = {
     },
   },
 };
+
+
+export const GetMyAssetsSchema: FastifySchema = {
+  description: "Fetch assets created by the authenticated investor",
+  tags: ["asset"],
+  summary: "Get my created assets",
+  security: [{ bearerAuth: [] }],
+  querystring: {
+    type: "object",
+    properties: {
+      page: { type: "number", default: 1 },
+      limit: { type: "number", default: 20 },
+      status: { type: "string", enum: ["pending", "verified", "tokenized"] },
+      type: {
+        type: "string",
+        enum: ["all", "invoice", "real_estate", "agriculture", "creator_ip", "receivable"],
+        default: "all",
+      },
+      search: { type: "string" },
+    },
+  },
+  response: {
+    200: {
+      description: "My assets fetched successfully",
+      type: "object",
+      properties: {
+        success: { type: "boolean" },
+        message: { type: "string" },
+        data: {
+          type: "object",
+          properties: {
+            page: { type: "number" },
+            limit: { type: "number" },
+            total: { type: "number" },
+            items: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  _id: { type: "string" },
+                  assetType: { type: "string" },
+                  title: { type: "string" },
+                  amount: { type: "number" },
+                  currency: { type: "string" },
+                  status: { type: "string", enum: ["pending", "verified", "tokenized"] },
+                  tokenName: { type: "string" },
+                  symbol: { type: "string" },
+                  fundedAmount: { type: "number" },
+                  fundingStatus: {
+                    type: "string",
+                    enum: ["funding", "funded", "fully_funded"],
+                  },
+                  minInvestment: { type: "number" },
+                  maxInvestment: { type: "number" },
+                  blobUrl: { type: "string" },
+                  createdAt: { type: "string", format: "date-time" },
+                  updatedAt: { type: "string", format: "date-time" },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+}

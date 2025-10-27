@@ -179,6 +179,53 @@ class AssetService {
       .sort({ createdAt: -1 })
       .lean<AssetDoc[]>();
   }
+
+
+  async getAssetsByUser(
+    userId: string,
+    opts: {
+      page?: number;
+      limit?: number;
+      status?: "pending" | "verified" | "tokenized";
+      type?: AssetType | "all";
+      search?: string;
+    } = {}
+  ): Promise<{
+    items: AssetDoc[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const page = Math.max(1, Number(opts.page ?? 1));
+    const limit = Math.max(1, Number(opts.limit ?? 20));
+    const skip = (page - 1) * limit;
+
+    const query: Record<string, any> = { userId: new mongoose.Types.ObjectId(userId) };
+
+    if (opts.status) query.status = opts.status;
+    if (opts.type && opts.type !== "all") query.assetType = opts.type;
+
+    if (opts.search?.trim()) {
+      const rx = new RegExp(opts.search.trim(), "i");
+      query.$or = [
+        { title: rx },
+        { description: rx },
+        { tokenName: rx },
+        { symbol: rx },
+      ];
+    }
+
+    const [items, total] = await Promise.all([
+      AssetModel.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean<AssetDoc[]>(),
+      AssetModel.countDocuments(query),
+    ]);
+
+    return { items, total, page, limit };
+  }
 }
 
 export default new AssetService();

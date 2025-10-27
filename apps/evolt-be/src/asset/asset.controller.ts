@@ -132,6 +132,43 @@ class AssetController {
       return reply.code(500).send({ success: false, message: error.message });
     }
   }
+
+  async getMyAssets(req: FastifyRequest, reply: FastifyReply) {
+    try {
+      const { user } = req as any;
+      const q = req.query as {
+        page?: string;
+        limit?: string;
+        status?: "pending" | "verified" | "tokenized";
+        type?: "all" | "invoice" | "agriculture" | "real_estate" | "creator_ip" | "receivable";
+        search?: string;
+      };
+
+      const page = parseInt(q.page ?? "1", 10);
+      const limit = parseInt(q.limit ?? "20", 10);
+
+      const result = await AssetService.getAssetsByUser(user.id, {
+        page,
+        limit,
+        status: q.status,
+        type: q.type,
+        search: q.search,
+      });
+
+      return reply.code(200).send(
+        UtilService.customResponse(true, "My assets fetched", {
+          page: result.page,
+          limit: result.limit,
+          total: result.total,
+          items: result.items,
+        })
+      );
+    } catch (error: any) {
+      console.error("Get my assets error:", error);
+      return reply.code(500).send(UtilService.customResponse(false, error.message));
+    }
+  }
+
 }
 
 export default new AssetController();

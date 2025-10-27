@@ -48,6 +48,20 @@ export class InvestorService {
         return investor;
     }
 
+    async linkAccountId(phoneNumber: string, accountId: string, publicKey: string) {
+        if (!phoneNumber || !accountId) throw new Error("userId and accountId are required");
+        await InvestorModel.findOneAndUpdate(
+            { phoneNumber: phoneNumber },
+            {
+                $set: {
+                    accountId,
+                    publicKey
+                },
+            },
+            { new: true, upsert: true }
+        );
+    }
+
     async getInvestorInvestments(accountId: string) {
         if (!accountId) throw new Error("Wallet address is required");
         const investor = await InvestorModel.findOne({ accountId });
