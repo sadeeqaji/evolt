@@ -29,7 +29,6 @@ jobs:
         with:
           node-version: "22.x"
 
-      # If your backend is standalone:
       - name: npm install, build (backend only)
         working-directory: ${{ env.WORKDIR }}
         run: |
