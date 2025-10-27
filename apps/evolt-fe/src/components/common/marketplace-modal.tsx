@@ -133,7 +133,7 @@ export function MarketplaceModal({ onClose }: MarketplaceModalProps) {
                     width: 50,
                     excavate: true,
                   }}
-                  value="https://wa.me/1234567890?text=Hello%20Evolt%20AI"
+                  value="https://wa.me/2349139932585?text=Hello%20Evolt%20AI"
                   size={200}
                   level="H"
                 />
@@ -142,7 +142,7 @@ export function MarketplaceModal({ onClose }: MarketplaceModalProps) {
                 variant="link"
                 onClick={() => {
                   window.open(
-                    "https://wa.me/1234567890?text=Hello%20Evolt%20AI",
+                    "https://wa.me/2349139932585?text=Hello%20Evolt%20AI",
                     "_blank"
                   );
                 }}
