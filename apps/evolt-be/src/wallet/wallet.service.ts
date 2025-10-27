@@ -1,5 +1,5 @@
 import { PrivateKey } from "@hashgraph/sdk";
-import { storeUserKey, getUserKey } from "../util/manage-key.js";
+import { storeUserKey, getUserKey } from "../util/util.manage-key.js";
 import crypto from "crypto";
 import { FastifyInstance } from "fastify";
 
