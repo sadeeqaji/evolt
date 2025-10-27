@@ -1,4 +1,4 @@
-import { AzureUtil } from "../util/azure.util.js";
+import { AzureUtil } from "../util/util.azure.js";
 import {
     TopicMessageSubmitTransaction,
     TokenCreateTransaction,

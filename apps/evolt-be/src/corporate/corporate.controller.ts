@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import CorporateService from "./corporate.service.js";
-import { AzureUtil } from "../util/azure.util.js";
+import { AzureUtil } from "../util/util.azure.js";
 import UtilService from "../util/util.service.js";
 import { v4 as uuidv4 } from "uuid";
 

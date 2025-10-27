@@ -1,4 +1,3 @@
-// src/whatsapp/whatsapp.controller.ts
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import axios from 'axios';
 // Remove unused service

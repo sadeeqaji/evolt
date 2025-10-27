@@ -49,7 +49,7 @@ export const createGetRwaAssetsTool = () => {
       name: 'get_rwa_assets',
       description:
         'Get a list of available real-world assets (RWAs) or investment pools. Use this to show a user what they can invest in.',
-      schema: getRwaAssetsSchema as any, // 👈 key change
+      schema: getRwaAssetsSchema as any,
     },
   );
 };
