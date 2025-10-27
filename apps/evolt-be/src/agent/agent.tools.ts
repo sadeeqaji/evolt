@@ -7,9 +7,7 @@ import investorService from '../investor/investor.service.js';
 import { WalletService } from '../wallet/wallet.service.js';
 import { WalletService as WalletCreator } from '../wallet/wallet.service.js';
 
-/**
- * 1️⃣ Get available RWA assets
- */
+
 export const createGetRwaAssetsTool = () => {
   const getRwaAssetsSchema = z.object({
     status: z
@@ -54,9 +52,7 @@ export const createGetRwaAssetsTool = () => {
   );
 };
 
-/**
- * 2️⃣ Get user portfolio
- */
+
 export const createGetPortfolioTool = () => {
   const portfolioSchema = z.object({
     accountId: z
@@ -87,9 +83,7 @@ export const createGetPortfolioTool = () => {
   );
 };
 
-/**
- * 3️⃣ Connect wallet
- */
+
 export const createConnectWalletTool = (app: FastifyInstance) => {
   const walletService = new WalletService(app);
   const connectWalletSchema = z.object({
@@ -118,14 +112,12 @@ export const createConnectWalletTool = (app: FastifyInstance) => {
       name: 'connect_wallet',
       description:
         "Generates and sends a wallet connection link when a user asks to connect, sign up, or link their wallet. Requires the user's phone number.",
-      schema: connectWalletSchema as any, // 👈 fix
+      schema: connectWalletSchema as any,
     },
   );
 };
 
-/**
- * 4️⃣ Create new wallet
- */
+
 export const createWalletTool = () => {
   const createWalletSchema = z.object({
     userId: z
@@ -140,7 +132,7 @@ export const createWalletTool = () => {
       const { userId } = input;
       try {
         const result = await WalletCreator.createWallet(userId);
-        return `Wallet created successfully! Your new account alias is ${result.alias}. Please fund this account to activate it.`;
+        return result.message;
       } catch (e: any) {
         return `Error: ${e.message}`;
       }
@@ -151,5 +143,31 @@ export const createWalletTool = () => {
         'Creates a new Hedera wallet (alias-based) for a user. Requires a unique user ID (like their phone number).',
       schema: createWalletSchema as any, // 👈 fix
     },
+  );
+};
+
+export const createAssociateTokenTool = (_app: FastifyInstance) => {
+  const schema = z.object({
+    phoneNumber: z.string().describe("User phone in E.164 or raw WhatsApp format"),
+    tokenId: z.string().describe("HTS token ID (e.g., 0.0.123456)"),
+  });
+
+  return tool(
+    async ({ phoneNumber, tokenId }) => {
+      try {
+        const res = await WalletService.associateTokenFor(phoneNumber, tokenId);
+        return typeof res?.message === "string"
+          ? res.message
+          : `Association completed for ${phoneNumber} -> ${tokenId}`;
+      } catch (e: any) {
+        return `Error associating token: ${e.message}`;
+      }
+    },
+    {
+      name: "associate_token",
+      description:
+        "Associate a user's Hedera account with an HTS token. Use when the user says 'associate' / 'link' to a token. Requires phoneNumber and tokenId.",
+      schema: schema as any,
+    }
   );
 };

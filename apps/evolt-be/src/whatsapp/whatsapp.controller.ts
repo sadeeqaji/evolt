@@ -1,21 +1,16 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import axios from 'axios';
-// Remove unused service
-// import investorService from "../investor/investor.service.js";
-// import { WalletService } from "../wallet/wallet.service.js";
+
 import { AgentService } from '../agent/agent.service.js';
 
 export class WhatsAppController {
-  // private walletConnect: WalletService; // No longer needed here
-  private agentService: AgentService; // Add agent service
+  private agentService: AgentService;
 
   constructor(private readonly fastify: FastifyInstance) {
-    // this.walletConnect = new WalletService(fastify); // No longer needed here
-    this.agentService = new AgentService(fastify); // Initialize the agent
+    this.agentService = new AgentService(fastify);
   }
 
   verifyWebhook = async (req: FastifyRequest, reply: FastifyReply) => {
-    // ... (this method remains unchanged)
     const q = req.query as Record<string, string>;
     const mode = q['hub.mode'];
     const token = q['hub.verify_token'];
@@ -34,17 +29,19 @@ export class WhatsAppController {
     try {
       const body = req.body as any;
       const message = body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
-      const from = message?.from; // This is the 'userId'
-      const text = message?.text?.body?.trim(); // Don't lowercase, let the AI handle it
+      const from = message?.from;
+      const text = message?.text?.body?.trim();
+
+      const contact = body?.entry[0]?.changes[0]?.value.contacts?.[0];
+      const username = contact?.profile?.name || 'there'
 
       if (!from || !text) return reply.code(200).send('NO_MESSAGE');
 
-      // 🛑 REMOVE old static logic
-      // if (text === "connect wallet") { ... }
+
 
       // ✨ ADD new agent logic
       // 1. Get response from the AI agent
-      const agentResponse = await this.agentService.handleMessage(from, text);
+      const agentResponse = await this.agentService.handleMessage(from, text, username);
 
       // 2. Send the agent's response back to the user
       await this.sendWhatsAppMessage(from, agentResponse);
@@ -68,7 +65,6 @@ export class WhatsAppController {
   };
 
   private async sendWhatsAppMessage(to: string, message: string) {
-    // ... (this method remains unchanged)
     await axios.post(
       `https://graph.facebook.com/v19.0/${process.env.WHATSAPP_PHONE_ID}/messages`,
       {
