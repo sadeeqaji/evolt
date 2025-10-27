@@ -12,11 +12,11 @@ import mongoose from "mongoose";
 class AssetService {
 
     async createAsset(
-        userId: string,
+        userId: mongoose.Types.ObjectId,
         data: Record<string, any>,
         file: { buffer: Buffer }
     ): Promise<AssetDoc> {
-        const business = await businessService.getBusiness(userId);
+        const business = await businessService.getBusinessById('68f6ea30864190a2b5949fbc');
         if (!business) throw new Error("Business profile not found.");
 
         const normalizedData = {
@@ -70,6 +70,8 @@ class AssetService {
             symbol: normalizedData.symbol,
             status: "pending",
             tokenName,
+            userId,
+
         };
 
         const asset = await AssetModel.create(assetPayload);

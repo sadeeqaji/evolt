@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Asset from "./asset.model.js";
 import { BusinessDoc } from "@business/business.model.js";
 import { CorporateDoc } from "@corporate/corporate.model.js";
+import { InvestmentDoc } from "@investment/investment.model.js";
 
 /**
  * ✅ Ensure discriminators are only registered once.
@@ -64,7 +65,7 @@ export interface AssetDoc extends Document {
     fundedAmount?: number;
     fundingStatus?: FundingStatus;
     description: string;
-
+    userId: mongoose.Types.ObjectId | InvestmentDoc;
     originatorId: mongoose.Types.ObjectId | BusinessDoc;
     corporateId?: mongoose.Types.ObjectId | CorporateDoc;
     metadata: any;
