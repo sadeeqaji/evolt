@@ -15,7 +15,7 @@ import {
   createGetPortfolioTool,
   createConnectWalletTool,
 } from './agent.tools.js';
-import { investorService } from './investor.service.js'; // ✅ make sure this import exists
+import { investorService } from './investor.service.js';
 
 // Temporary in-memory chat store (replace with Redis in production)
 const chatHistoryStore = new Map<string, (HumanMessage | AIMessage)[]>();

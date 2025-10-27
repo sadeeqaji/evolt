@@ -16,9 +16,8 @@ import { Label } from "@evolt/components/ui/label";
 import { Upload, Info, HardDrive, FileText, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import apiClient from "@evolt/lib/apiClient";
-import { Textarea } from "@evolt/components/ui/textarea"; // Import Textarea
+import { Textarea } from "@evolt/components/ui/textarea";
 
-// Assuming 'invoice' is one of the valid AssetTypes, add others if needed
 const assetTypes = [
   { title: "Invoice", type: "invoice" },
   { title: "Real Estate", type: "real_estate" },
@@ -28,26 +27,23 @@ const assetTypes = [
   { title: "Automotive & Equipment", type: "automotive_equipment" },
 ];
 
-const currencies = [{ title: "USD", value: "USD" }]; // Add more if needed
+const currencies = [{ title: "USD", value: "USD" }];
 
 export default function NewListingPage() {
   const router = useRouter();
 
-  // State for all form fields based on curl command
-  const [assetType, setAssetType] = useState("invoice"); // Defaulting based on curl
-  const [title, setTitle] = useState(""); // Replaces 'name'
-  const [description, setDescription] = useState(""); // New field
-  const [symbol, setSymbol] = useState(""); // Existing field
-  const [amount, setAmount] = useState(""); // New field (might relate to totalTarget?)
-  const [currency, setCurrency] = useState("USD"); // New field
-  const [yieldRate, setYieldRate] = useState(""); // New field (e.g., "0.12")
-  const [durationDays, setDurationDays] = useState(""); // New field
-  const [totalTarget, setTotalTarget] = useState(""); // New field
-  const [minInvestment, setMinInvestment] = useState(""); // New field
-  const [maxInvestment, setMaxInvestment] = useState(""); // New field
-  const [expiryDate, setExpiryDate] = useState(""); // New field (Type date for input)
-  const [corporateId, setCorporateId] = useState(""); // New field (Assuming this might be needed)
-  const [proofFile, setProofFile] = useState<File | null>(null); // Renamed for clarity
+  const [assetType, setAssetType] = useState("invoice");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [symbol, setSymbol] = useState("");
+  const [yieldRate, setYieldRate] = useState("");
+  const [durationDays, setDurationDays] = useState("");
+  const [totalTarget, setTotalTarget] = useState("");
+  const [minInvestment, setMinInvestment] = useState("");
+  const [maxInvestment, setMaxInvestment] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [corporateId, setCorporateId] = useState("");
+  const [proofFile, setProofFile] = useState<File | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
 
   // Handle file selection
@@ -68,45 +64,36 @@ export default function NewListingPage() {
     }
   };
 
-  // Format date to ISO string for the API
   const formatExpiryDate = () => {
     if (!expiryDate) return "";
     try {
-      // Assuming expiryDate state holds 'YYYY-MM-DD' from the input type="date"
       const date = new Date(expiryDate);
-      return date.toISOString(); // Converts to "YYYY-MM-DDTHH:mm:ss.sssZ"
+      return date.toISOString();
     } catch (e) {
       console.error("Invalid date format:", expiryDate);
       return "";
     }
   };
 
-  // Updated publish logic with API call including all fields
   const handlePublish = async () => {
-    // Basic validation (add more specific checks as needed)
     if (
       !assetType ||
       !title ||
       !symbol ||
       !description ||
-      !amount ||
-      !currency ||
       !yieldRate ||
       !durationDays ||
       !totalTarget ||
       !minInvestment ||
       !maxInvestment ||
       !expiryDate ||
-      !corporateId || // Assuming corporateId is required
       !proofFile
     ) {
       toast.error("Please fill all required fields and upload proof document.");
       return;
     }
 
-    // Validate numeric fields
     const numericFields = {
-      amount,
       yieldRate,
       durationDays,
       totalTarget,
@@ -132,25 +119,24 @@ export default function NewListingPage() {
     try {
       const formData = new FormData();
       formData.append("assetType", assetType);
-      formData.append("title", title); // Using 'title' instead of 'name'
+      formData.append("title", title);
       formData.append("description", description);
-      formData.append("symbol", symbol.toUpperCase()); // Send symbol uppercase
-      formData.append("amount", amount);
-      formData.append("currency", currency);
+      formData.append("symbol", symbol.toUpperCase());
+      formData.append("amount", totalTarget);
+      formData.append("currency", "USD");
       formData.append("yieldRate", yieldRate);
       formData.append("durationDays", durationDays);
       formData.append("totalTarget", totalTarget);
       formData.append("minInvestment", minInvestment);
       formData.append("maxInvestment", maxInvestment);
       formData.append("expiryDate", formattedExpiry);
-      formData.append("corporateId", corporateId); // Add corporateId if needed
-      formData.append("files", proofFile); // Changed key to 'files' as per curl
+      formData.append("corporateId", "68f6f0f85a2f445265e64cc0");
+      formData.append("files", proofFile);
 
-      // **IMPORTANT:** Replace '/pool' with your actual backend endpoint if different
-      const response = await apiClient.post("/asset", formData); // Using /pool endpoint
+      const response = await apiClient.post("/asset", formData);
 
       toast.success("Listing created successfully!", { id: loadingToastId });
-      router.push("/listing"); // Redirect to the listing page on success
+      router.push("/listing");
     } catch (error: any) {
       console.error("Listing creation failed:", error);
       toast.error(
@@ -184,7 +170,7 @@ export default function NewListingPage() {
               id="proof-upload"
               className="hidden"
               onChange={handleFileChange}
-              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.svg" // Keep accepted types broad
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.svg"
               disabled={isPublishing}
             />
             {proofFile ? (
@@ -299,45 +285,6 @@ export default function NewListingPage() {
               </p>
             </div>
 
-            {/* Amount & Currency */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="amount">Amount</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="e.g., 25000"
-                  className="h-11 bg-muted/20 border-border"
-                  disabled={isPublishing}
-                />
-                <p className="text-xs text-muted-foreground">
-                  The primary value associated with the asset (e.g., invoice
-                  total).
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="currency">Currency</Label>
-                <Select
-                  value={currency}
-                  onValueChange={setCurrency}
-                  disabled={isPublishing}
-                >
-                  <SelectTrigger className="h-11 bg-muted/20 border-border w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {currencies.map((curr) => (
-                      <SelectItem key={curr.value} value={curr.value}>
-                        {curr.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
             {/* Yield Rate & Duration */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -345,12 +292,12 @@ export default function NewListingPage() {
                 <Input
                   id="yieldRate"
                   type="number"
-                  step="0.01" // Allow decimals
-                  value={(parseFloat(yieldRate) * 100).toFixed(2)} // Display as percentage
+                  step="0.01"
+                  value={(parseFloat(yieldRate) * 100).toFixed(2)}
                   onChange={(e) => {
                     const percentageValue = parseFloat(e.target.value);
                     if (!isNaN(percentageValue)) {
-                      setYieldRate((percentageValue / 100).toString()); // Store as decimal
+                      setYieldRate((percentageValue / 100).toString());
                     } else {
                       setYieldRate("");
                     }
@@ -437,7 +384,7 @@ export default function NewListingPage() {
               <Label htmlFor="expiryDate">Funding Expiry Date</Label>
               <Input
                 id="expiryDate"
-                type="date" // Use date type for better UX
+                type="date"
                 value={expiryDate}
                 onChange={(e) => setExpiryDate(e.target.value)}
                 className="h-11 bg-muted/20 border-border"
@@ -445,22 +392,6 @@ export default function NewListingPage() {
               />
               <p className="text-xs text-muted-foreground">
                 Date when the funding period for this pool ends.
-              </p>
-            </div>
-
-            {/* Corporate ID (Optional?) */}
-            <div className="space-y-2">
-              <Label htmlFor="corporateId">Corporate ID</Label>
-              <Input
-                id="corporateId"
-                value={corporateId}
-                onChange={(e) => setCorporateId(e.target.value)}
-                placeholder="Enter associated Corporate ID"
-                className="h-11 bg-muted/20 border-border"
-                disabled={isPublishing}
-              />
-              <p className="text-xs text-muted-foreground">
-                Internal ID for the associated corporate entity (if applicable).
               </p>
             </div>
           </div>
