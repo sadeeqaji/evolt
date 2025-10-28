@@ -37,6 +37,7 @@ export class WhatsAppController {
 
       if (!from || !text) return reply.code(200).send('NO_MESSAGE');
 
+      await this.sendTypingIndicator(message.id);
 
 
       // ✨ ADD new agent logic
@@ -80,4 +81,26 @@ export class WhatsAppController {
       },
     );
   }
+
+
+  private async sendTypingIndicator(messageId: string) {
+    await axios.post(
+      `https://graph.facebook.com/v19.0/${process.env.WHATSAPP_PHONE_ID}/messages`,
+      {
+        messaging_product: 'whatsapp',
+        status: 'read',
+        message_id: messageId,
+        typing_indicator: { type: 'text' },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+  }
+
 }
+
+

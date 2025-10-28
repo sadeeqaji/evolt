@@ -15,7 +15,9 @@ import {
   createGetPortfolioTool,
   createConnectWalletTool,
   createWalletTool,
-  createAssociateTokenTool
+  createAssociateTokenTool,
+  createPreviewEarningsTool,
+  createJoinPoolTool
 } from './agent.tools.js';
 import InvestorService from '../investor/investor.service.js';
 
@@ -63,7 +65,8 @@ export class AgentService {
       createGetPortfolioTool(),
       createConnectWalletTool(this.app),
       createAssociateTokenTool(this.app),
-
+      createPreviewEarningsTool(),
+      createJoinPoolTool(),
     ];
     this.agent = createAgent({
       model: llm,

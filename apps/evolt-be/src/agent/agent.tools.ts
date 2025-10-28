@@ -6,6 +6,8 @@ import poolService from '../pool/pool.service.js';
 import investorService from '../investor/investor.service.js';
 import { WalletService } from '../wallet/wallet.service.js';
 import { WalletService as WalletCreator } from '../wallet/wallet.service.js';
+import assetService from "../asset/asset.service.js";
+import investmentService from '@investment/investment.service.js';
 
 
 export const createGetRwaAssetsTool = () => {
@@ -14,41 +16,41 @@ export const createGetRwaAssetsTool = () => {
       .string()
       .optional()
       .describe("Filter by status: 'funding', 'funded', 'fully_funded'"),
-    search: z
-      .string()
-      .optional()
-      .describe('A search term to filter pools by name'),
+    search: z.string().optional().describe("A search term to filter pools by name"),
   });
 
   return tool(
-    async (input: z.infer<typeof getRwaAssetsSchema>) => {
-      const { status, search } = input;
+    async ({ status, search }: z.infer<typeof getRwaAssetsSchema>) => {
+      console.log(search, 'search')
+      console.log(status, 'status')
+
       try {
         const result = await poolService.listPools({
-          status: status as any,
+          status: 'funding',
           search,
           page: 1,
           limit: 5,
         });
+        const rows = result.items.map((item: any, i: number) => {
+          const y = Number(item.yieldRate ?? 0) * 100;
+          const p = Number(item.fundingProgress ?? 0);
+          const d = Number(item.daysLeft ?? 0);
+          return `${i + 1}. ${item.projectName} — Yield: ${y.toFixed(
+            0
+          )}% • Progress: ${p.toFixed(0)}% • ${d} days left`;
+        });
 
-        return JSON.stringify(
-          result.items.map((item: any) => ({
-            name: item.projectName,
-            yield: item.yieldRate,
-            progress: item.fundingProgress,
-            daysLeft: item.daysLeft,
-          })),
-        );
+        return rows.length ? rows.join("\n") : "No assets found.";
       } catch (e: any) {
         return `Error: ${e.message}`;
       }
     },
     {
-      name: 'get_rwa_assets',
+      name: "get_rwa_assets",
       description:
-        'Get a list of available real-world assets (RWAs) or investment pools. Use this to show a user what they can invest in.',
+        "Get a list of available real-world assets (RWAs) or investment pools. Use this to show a user what they can invest in.",
       schema: getRwaAssetsSchema as any,
-    },
+    }
   );
 };
 
@@ -171,3 +173,103 @@ export const createAssociateTokenTool = (_app: FastifyInstance) => {
     }
   );
 };
+
+
+export const createPreviewEarningsTool = () => {
+  const schema = z.object({
+    assetId: z.string().describe("The Asset _id"),
+    amount: z.number().positive().describe("User's invest amount in VUSD"),
+  });
+
+  return tool(
+    async ({ assetId, amount }: z.infer<typeof schema>) => {
+      const asset = await assetService.getAssetById(assetId);
+      if (!asset) return "Asset not found.";
+
+      const face = Number(asset.amount || 0);
+      const yieldRate = Number(asset.yieldRate || 0);
+      const durationDays = Number(asset.durationDays || 90);
+      const totalTarget = Number(asset.totalTarget || 0);
+
+      const purchase = totalTarget || (yieldRate ? face * (1 - yieldRate) : face);
+      const profitPool = Math.max(0, face - purchase);
+      const expected = purchase > 0 ? (amount / purchase) * profitPool : 0;
+
+      const expected2dp = Math.round(expected * 100) / 100;
+
+      return [
+        `Preview for ${asset.assetType?.toUpperCase() || "asset"}:`,
+        `• Face Value: $${face.toLocaleString()}`,
+        `• Discount: ${(yieldRate * 100).toFixed(0)}%  → Purchase: $${purchase.toLocaleString()}`,
+        `• Profit Pool: $${profitPool.toLocaleString()}`,
+        `• Your Investment: $${amount.toFixed(2)} → Expected Earnings ≈ $${expected2dp.toFixed(2)} at maturity (~${durationDays} days).`,
+        ``,
+        `Note: This uses proportional profit-share. Actual on-chain settlement happens at maturity.`,
+      ].join("\n");
+    },
+    {
+      name: "preview_earnings",
+      description:
+        "Calculate and explain expected earnings for a given asset and amount (2 decimal places).",
+      schema: schema as any,
+    }
+  );
+};
+
+
+export const createJoinPoolTool = () => {
+  const schema = z.object({
+    phoneNumber: z.string().describe("User phone in E.164 or WhatsApp raw"),
+    assetId: z.string().describe("Asset _id to invest in"),
+    amount: z.number().positive().describe("Amount in VUSD"),
+    txId: z.string().optional().describe("Hedera transaction id of user's vUSD → escrow transfer"),
+  });
+
+  return tool(
+    async ({ phoneNumber, assetId, amount, txId }: z.infer<typeof schema>) => {
+      // 1) Resolve investor
+      const investor = await investorService.findByPhone(phoneNumber);
+      if (!investor?.accountId) {
+        return "Your wallet is not connected yet. Please connect your wallet first.";
+      }
+      const investorId = String(investor._id);
+      const accountId = investor.accountId;
+
+      if (txId) {
+        try {
+          const res = await investmentService.investFromDeposit(
+            { accountId, investorId },
+            { assetId, txId }
+          );
+          const inv = res?.investment;
+          const earned = Number(inv?.expectedYield || 0);
+          return [
+            "✅ Investment recorded on-chain.",
+            `• Amount: $${Number(inv?.vusdAmount || amount).toFixed(2)} VUSD`,
+            `• Expected Earnings: $${earned.toFixed(2)} VUSD`,
+            `• Maturity: ${inv?.maturedAt ? new Date(inv.maturedAt).toDateString() : "~"}`
+          ].join("\n");
+        } catch (e: any) {
+          return `Error finalizing investment: ${e?.message || String(e)}`;
+        }
+      }
+
+
+      return [
+        "Almost there! To join this pool:",
+        "1) Open the app and send your VUSD to the escrow (you’ll get a transaction id).",
+        "2) Paste the transaction id here and I’ll record your investment.",
+        "",
+        "If you don’t have VUSD yet, reply: TOPUP to fund via card/transfer.",
+      ].join("\n");
+    },
+    {
+      name: "join_pool",
+      description:
+        "Record an investment for a user. If txId is provided, finalizes the investment by verifying the vUSD→escrow transfer on the mirror node.",
+      schema: schema as any,
+    }
+  );
+};
+
+
