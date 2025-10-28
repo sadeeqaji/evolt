@@ -33,7 +33,7 @@ jobs:
       - name: yarn install, build (backend only)
         working-directory: ${{ env.WORKDIR }}
         run: |
-          yarn install
+          yarn install --production --ignore-scripts --prefer-offline
           yarn build
 
       - name: Upload artifact for deployment job (backend only)
