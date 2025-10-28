@@ -8,7 +8,6 @@ on:
       - ".github/workflows/**"
       - "package.json"
       - "yarn.lock"
-      - "pnpm-lock.yaml"
   workflow_dispatch:
 
 jobs:
@@ -23,20 +22,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js version
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "22.x"
           cache: "yarn"
           cache-dependency-path: "yarn.lock"
 
-      - name: yarn install, build (backend only)
+      - name: Install all dependencies (with devDependencies)
         working-directory: ${{ env.WORKDIR }}
-        run: |
-          yarn install --production --ignore-scripts --prefer-offline
-          yarn build
+        run: yarn install --frozen-lockfile
 
-      - name: Upload artifact for deployment job (backend only)
+      - name: Build the project
+        working-directory: ${{ env.WORKDIR }}
+        run: yarn build
+
+      - name: Prune devDependencies for deployment
+        working-directory: ${{ env.WORKDIR }}
+        run: yarn install --production --ignore-scripts --prefer-offline
+
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: evolt-be
@@ -51,7 +56,7 @@ jobs:
       contents: read
 
     steps:
-      - name: Download artifact from build job
+      - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           name: evolt-be
@@ -64,7 +69,7 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_BD5589DF03BB4DDE81F7EE8EF0A9CC2A }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_7B7886D8665745218F696E8EDF748949 }}
 
-      - name: Deploy to Azure Web App (backend subfolder)
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: "useevolt"
