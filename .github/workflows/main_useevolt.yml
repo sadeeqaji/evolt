@@ -6,10 +6,6 @@ on:
     paths:
       - "apps/evolt-be/**"
       - ".github/workflows/**"
-      - "package.json"
-      - "yarn.lock"
-      - "pnpm-lock.yaml"
-      - "package-lock.json"
   workflow_dispatch:
 
 jobs:
@@ -28,12 +24,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22.x"
+          cache: "yarn"
+          cache-dependency-path: "${{ env.WORKDIR }}/yarn.lock"
 
-      - name: npm install, build (backend only)
+      - name: yarn install, build (backend only)
         working-directory: ${{ env.WORKDIR }}
         run: |
-          npm install
-          npm run build --if-present
+          yarn install
+          yarn  build
 
       - name: Upload artifact for deployment job (backend only)
         uses: actions/upload-artifact@v4
