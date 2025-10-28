@@ -20,7 +20,7 @@ import {
   createJoinPoolTool,
 } from './agent.tools.js';
 import InvestorService from '../investor/investor.service.js';
-import { systemPrompt } from '@util/prompt.js';
+import { systemPrompt } from '../util/prompt.js';
 
 const chatHistoryStore = new Map<string, (HumanMessage | AIMessage)[]>();
 

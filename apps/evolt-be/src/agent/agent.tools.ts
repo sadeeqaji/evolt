@@ -7,8 +7,8 @@ import investorService from '../investor/investor.service.js';
 import { WalletService } from '../wallet/wallet.service.js';
 import { WalletService as WalletCreator } from '../wallet/wallet.service.js';
 import assetService from "../asset/asset.service.js";
-import investmentService from '@investment/investment.service.js';
-import PinService from 'pin/pin.service.js';
+import investmentService from '../investment/investment.service.js';
+import PinService from '../pin/pin.service.js';
 
 
 export const createGetRwaAssetsTool = () => {

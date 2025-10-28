@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from "axios";
-import investorService from "@investor/investor.service.js";
+import investorService from "../investor/investor.service.js";
 import { DecryptedResponse } from "./whatsapp.type.js";
 import { PinService } from "../pin/pin.service.js";
 
