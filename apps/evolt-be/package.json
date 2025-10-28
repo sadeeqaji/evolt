@@ -59,6 +59,7 @@
     "fastify-cors": "^6.1.0",
     "fastify-env": "^2.2.0",
     "fastify-plugin": "^5.0.1",
+    "fastify-raw-body": "^5.0.0",
     "fastify-swagger": "^5.2.0",
     "hedera-agent-kit": "^3.4.0",
     "ioredis": "^5.8.0",

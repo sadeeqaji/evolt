@@ -85,7 +85,7 @@ export class AgentService {
 
     const chat_history = chatHistoryStore.get(userId) || [];
 
-    const userAccountId = (await InvestorService.findByPhone(userId))
+    const userAccountId = (await InvestorService.getInvestorByPhone(userId))
       ?.accountId;
 
     const contextInput = `
@@ -106,9 +106,9 @@ export class AgentService {
         ? last.content
         : Array.isArray(last?.content)
           ? last.content
-              .map((p: any) => (p?.type === 'text' ? p.text : ''))
-              .join('')
-              .trim()
+            .map((p: any) => (p?.type === 'text' ? p.text : ''))
+            .join('')
+            .trim()
           : '';
 
     chat_history.push(new HumanMessage(input));
