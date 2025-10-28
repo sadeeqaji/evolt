@@ -247,7 +247,7 @@ export class InvestorService {
     }
 
 
-    async getInvestorByPhone(phone: string): Promise<IInvestor> {
+    async getInvestorByPhone(phone: string): Promise<IInvestor | null> {
         return InvestorModel.findOne({ phoneNumber: phone });
     }
 
