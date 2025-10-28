@@ -52,19 +52,27 @@ export class WhatsAppService {
     /** Handle flow navigation logic */
     async getNextScreen(decryptedBody: DecryptedResponse) {
         const { action, screen, data } = decryptedBody;
-
         if (action === "ping") return { data: { status: "active" } };
 
         switch (screen) {
             case "SET_PIN":
+                if (data.pin) {
+                    return {
+                        screen: 'CONFIRM_PIN',
+                        next: { type: "screen", name: "CONFIRM_PIN" },
+                        data: { pin: Number(data?.pin) },
+                    };
+                }
                 return {
                     next: { type: "screen", name: "CONFIRM_PIN" },
                     data: { pin: data?.pin },
                 };
 
+
             case "CONFIRM_PIN": {
-                if (data?.pin !== data?.confirmNewPin) {
+                if (data?.pin !== Number(data?.confirmPin)) {
                     return {
+                        screen: 'SET_PIN',
                         next: { type: "screen", name: "PIN_MISMATCH" },
                         data: { message: "PINs do not match." },
                     };
@@ -77,14 +85,48 @@ export class WhatsAppService {
                 }
 
                 return {
+                    screen: 'PIN_SUCCESS',
                     next: { type: "screen", name: "PIN_SUCCESS" },
                     data: { message: "Your PIN has been set successfully!" },
                 };
             }
 
+            case "ENTER_PIN": {
+                const phoneNumber = data?.phoneNumber || decryptedBody.flow_token;
+                const investor = await investorService.getInvestorByPhone(phoneNumber);
+                if (!investor) {
+                    return {
+                        screen: "INVALID_PIN",
+                        next: { type: "screen", name: "INVALID_PIN" },
+                        data: { message: "Investor not found." },
+                    };
+                }
+                const valid = await PinService.verifyPin(
+                    String(investor._id),
+                    String(data.pin)
+                );
+
+                if (!valid) {
+                    console.log("❌ Invalid transaction PIN for", phoneNumber);
+                    return {
+                        screen: "INVALID_PIN",
+                        next: { type: "screen", name: "INVALID_PIN" },
+                        data: { message: "Invalid PIN entered." },
+                    };
+                }
+
+                console.log("✅ PIN verified for transaction:", investor._id);
+                return {
+                    screen: "TRANSACTION_APPROVED",
+                    next: { type: "screen", name: "TRANSACTION_APPROVED" },
+                    data: { message: "Transaction approved successfully!" },
+                };
+            }
+
+
             case "PIN_MISMATCH":
                 return {
-                    next: { type: "screen", name: "SET_PIN" },
+                    screen: 'SET_PIN',
                     data: {},
                 };
 
@@ -96,7 +138,7 @@ export class WhatsAppService {
 
     async sendWhatsAppFlow(
         to: string,
-        flowId: string,
+        flowId: number,
         flowName: string,
         params?: Record<string, unknown>
     ): Promise<void> {
@@ -122,9 +164,11 @@ export class WhatsAppService {
                     name: "flow",
                     parameters: {
                         flow_id: flowId,
-                        flow_token: to,
                         flow_cta: flowName,
-                        mode: process.env.WHATSAPP_FLOW_MODE || "draft",
+                        flow_token: to,
+                        mode: "published",
+                        flow_message_version:
+                            process.env.WHATSAPP_FLOW_VERSION || "3",
                     },
                 },
             },
@@ -135,13 +179,11 @@ export class WhatsAppService {
                 `/${process.env.WHATSAPP_PHONE_ID}/messages`,
                 payload
             );
-            console.log("✅ WhatsApp Flow sent:", res.data);
         } catch (error) {
             this.handleError(error);
         }
     }
 
-    /** Centralized error handling */
     private handleError(error: unknown): void {
         if (axios.isAxiosError(error)) {
             console.error(

@@ -8,6 +8,7 @@ import { WalletService } from '../wallet/wallet.service.js';
 import { WalletService as WalletCreator } from '../wallet/wallet.service.js';
 import assetService from "../asset/asset.service.js";
 import investmentService from '@investment/investment.service.js';
+import PinService from 'pin/pin.service.js';
 
 
 export const createGetRwaAssetsTool = () => {
@@ -17,11 +18,19 @@ export const createGetRwaAssetsTool = () => {
       .optional()
       .describe("Filter by status: 'funding', 'funded', 'fully_funded'"),
     search: z.string().optional().describe("A search term to filter pools by name"),
+    phoneNumber: z.string().describe("User phone in E.164 or WhatsApp raw"),
+
   });
 
   return tool(
-    async ({ status, search }: z.infer<typeof getRwaAssetsSchema>) => {
-      console.log(search, 'search')
+    async ({ status, search, phoneNumber }: z.infer<typeof getRwaAssetsSchema>) => {
+
+      const hasPin = await PinService.ensurePin(phoneNumber);
+      if (!hasPin) {
+        return "🔐 Please set your transaction PIN — a WhatsApp Flow has been sent.";
+      }
+      await PinService.requestAuthorization(phoneNumber, 'Investment')
+
       try {
         const result = await poolService.listPools({
           status: status as any,
@@ -233,6 +242,10 @@ export const createJoinPoolTool = () => {
       }
       const investorId = String(investor._id);
       const accountId = investor.accountId;
+      const hasPin = await PinService.ensurePin(phoneNumber);
+      if (!hasPin) {
+        return "🔐 Please set your transaction PIN — a WhatsApp Flow has been sent.";
+      }
 
       if (txId) {
         try {

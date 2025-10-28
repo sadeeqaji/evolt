@@ -15,10 +15,10 @@ export interface DecryptedResponse {
     action: string;
     data: {
         phoneNumber: string;
-        pin: string;
-        newPin: string;
-        confirmNewPin: string;
-        oldPin: string
+        pin: number;
+        newPin: number;
+        confirmPin: number;
+        oldPin: number
     };
     flow_token: string;
     screen: string;
