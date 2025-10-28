@@ -3,7 +3,7 @@ import axios from 'axios';
 import crypto from 'crypto';
 
 import { AgentService } from '../agent/agent.service.js';
-import { encryptResponse, decryptRequestBody } from '@util/util.whatsapp-encryption.js';
+import { encryptResponse, decryptRequestBody } from '../util/util.whatsapp-encryption.js';
 import { DecryptRequestBody, DecryptedResponse } from './whatsapp.type.js';
 import WhatsAppService from './whatsapp.service.js';
 
