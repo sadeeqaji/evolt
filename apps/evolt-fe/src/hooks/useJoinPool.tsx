@@ -69,7 +69,7 @@ export function useJoinPool(): UseJoinPoolResult {
       try {
         setLoading(true);
         setError(null);
-        clearInvestmentSuccess(); // Clear previous success data
+        clearInvestmentSuccess();
 
         const transferTx = new TransferTransaction()
           .addTokenTransfer(
