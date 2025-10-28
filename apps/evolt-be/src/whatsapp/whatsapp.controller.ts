@@ -27,43 +27,58 @@ export class WhatsAppController {
 
   handleIncoming = async (req: FastifyRequest, reply: FastifyReply) => {
     try {
-      const body = req.body as any;
-      const message = body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
+      const body: any = req.body;
+      const entry = body.entry?.[0];
+      const change = entry?.changes?.[0];
+      const message = change?.value?.messages?.[0];
+      const metadata = change?.value?.metadata;
+      const phoneNumberId = metadata?.phone_number_id;
       const from = message?.from;
       const text = message?.text?.body?.trim();
 
-      const contact = body?.entry[0]?.changes[0]?.value.contacts?.[0];
-      const username = contact?.profile?.name || 'there'
+      if (from === phoneNumberId) {
+        return reply.code(200).send('IGNORED_OUTBOUND');
+      }
 
-      if (!from || !text) return reply.code(200).send('NO_MESSAGE');
+      if (!from || !text) {
+        return reply.code(200).send('NO_MESSAGE');
+      }
 
-      await this.sendTypingIndicator(message.id);
 
 
-      // ✨ ADD new agent logic
-      // 1. Get response from the AI agent
+      const messageId = message.id;
+
+      await this.sendTypingIndicator(messageId);
+
+      const isDuplicate = await this.fastify.redis.get(messageId);
+      if (isDuplicate) {
+        return reply.code(200).send('DUPLICATE_MESSAGE');
+      }
+
+      await this.fastify.redis.setex(messageId, 3600, 'seen');
+
+
+      const contact = change?.value?.contacts?.[0];
+      const username = contact?.profile?.name || 'there';
+
       const agentResponse = await this.agentService.handleMessage(from, text, username);
-
-      // 2. Send the agent's response back to the user
       await this.sendWhatsAppMessage(from, agentResponse);
 
       return reply.code(200).send();
     } catch (err: any) {
       this.fastify.log.error('❌ WhatsApp error:', err);
-      // Send a fallback message to the user
-      if (
-        (req.body as any)?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from
-      ) {
-        const from = (req.body as any).entry[0].changes[0].value.messages[0]
-          .from;
+      const from =
+        (req.body as any)?.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from;
+      if (from) {
         await this.sendWhatsAppMessage(
           from,
           'Sorry, I ran into an error. Please try again in a moment.',
         );
       }
-      reply.code(500).send({ error: 'Internal Server Error' });
+      return reply.code(500).send({ error: 'Internal Server Error' });
     }
   };
+
 
   private async sendWhatsAppMessage(to: string, message: string) {
     await axios.post(
