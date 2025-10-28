@@ -17,7 +17,6 @@ interface JoinPoolParams {
   assetId: string;
 }
 
-// Data for the success modal
 interface InvestmentSuccessData {
   amount: number;
   assetId: string;
@@ -27,8 +26,8 @@ interface UseJoinPoolResult {
   loading: boolean;
   error: string | null;
   joinPool: (params: JoinPoolParams) => Promise<void>;
-  investmentSuccessData: InvestmentSuccessData | null; // New state
-  clearInvestmentSuccess: () => void; // New function
+  investmentSuccessData: InvestmentSuccessData | null;
+  clearInvestmentSuccess: () => void;
 }
 
 const VUSD_TOKEN_ID = "0.0.7029847";

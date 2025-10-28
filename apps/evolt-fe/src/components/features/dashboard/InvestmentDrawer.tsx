@@ -14,8 +14,8 @@ import { AssociateTokenDialog } from "@evolt/components/common/AssociateTokenMod
 import { toast } from "sonner";
 import { useJoinPool } from "@evolt/hooks/useJoinPool";
 import { useGetVUSDBalance } from "@evolt/hooks/useGetVUSDBalance";
-import { InvestmentSuccessModal } from "./InvestmentSuccessModal"; // Import the new modal
-import { useRouter } from "next/navigation"; // Import the router
+import { InvestmentSuccessModal } from "./InvestmentSuccessModal";
+import { useRouter } from "next/navigation";
 
 interface InvestmentDrawerProps {
   open: boolean;
@@ -51,7 +51,6 @@ export function InvestmentDrawer({
     handleAssociate: originalHandleAssociate,
   } = useTokenAssociation(tokenId);
 
-  // Get new state and functions from the hook
   const {
     loading: isJoining,
     joinPool,
@@ -300,11 +299,10 @@ export function InvestmentDrawer({
                   }
                   size="lg"
                   loading={isJoining}
-                  className={`w-full rounded-2xl h-14 text-lg font-medium ${
-                    hasInsufficientBalance
-                      ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-                      : ""
-                  }`}
+                  className={`w-full rounded-2xl h-14 text-lg font-medium ${hasInsufficientBalance
+                    ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                    : ""
+                    }`}
                 >
                   {buttonText}
                 </Button>

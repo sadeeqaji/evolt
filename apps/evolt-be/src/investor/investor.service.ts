@@ -246,6 +246,7 @@ export class InvestorService {
         };
     }
 
+
     async findByPhone(phone: string) {
         return InvestorModel.findOne({ phoneNumber: phone });
     }
