@@ -16,6 +16,7 @@ import { indexRoute } from '../index.route.js';
 import { errorHandlerPlugin } from '../config/error-handler.js';
 import { Options } from '../config/swagger.js';
 import { config } from '../config/app.js';
+import fastifyRawBody from 'fastify-raw-body';
 
 export async function corePlugin(
   app: FastifyInstance,
@@ -26,6 +27,12 @@ export async function corePlugin(
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
+  });
+
+  app.register(fastifyRawBody, {
+    field: 'rawBody',
+    global: true,
+    encoding: 'utf8',
   });
 
   await app.register(fastifyCookie, {

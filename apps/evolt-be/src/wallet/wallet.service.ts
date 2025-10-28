@@ -85,7 +85,7 @@ export class WalletService {
 
     static async associateTokenFor(phoneNumber: string, tokenId: string) {
         // 1) Look up investor + key
-        const investor = await InvestorService.findByPhone(phoneNumber);
+        const investor = await InvestorService.getInvestorByPhone(phoneNumber);
         if (!investor?.accountId)
             throw new Error("No Hedera account linked. Ask the user to create/connect a wallet.");
 

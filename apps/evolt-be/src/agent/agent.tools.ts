@@ -22,15 +22,14 @@ export const createGetRwaAssetsTool = () => {
   return tool(
     async ({ status, search }: z.infer<typeof getRwaAssetsSchema>) => {
       console.log(search, 'search')
-      console.log(status, 'status')
-
       try {
         const result = await poolService.listPools({
-          status: 'funding',
+          status: status as any,
           search,
           page: 1,
           limit: 5,
         });
+
         const rows = result.items.map((item: any, i: number) => {
           const y = Number(item.yieldRate ?? 0) * 100;
           const p = Number(item.fundingProgress ?? 0);
@@ -98,7 +97,7 @@ export const createConnectWalletTool = (app: FastifyInstance) => {
     async (input: z.infer<typeof connectWalletSchema>) => {
       const { phoneNumber } = input;
       try {
-        const existing = await investorService.findByPhone(phoneNumber);
+        const existing = await investorService.getInvestorByPhone(phoneNumber);
         if (existing?.accountId) {
           return `This user's wallet is already connected (Account ID: ${existing.accountId}).`;
         }
@@ -228,7 +227,7 @@ export const createJoinPoolTool = () => {
   return tool(
     async ({ phoneNumber, assetId, amount, txId }: z.infer<typeof schema>) => {
       // 1) Resolve investor
-      const investor = await investorService.findByPhone(phoneNumber);
+      const investor = await investorService.getInvestorByPhone(phoneNumber);
       if (!investor?.accountId) {
         return "Your wallet is not connected yet. Please connect your wallet first.";
       }
