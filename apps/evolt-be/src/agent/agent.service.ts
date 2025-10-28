@@ -17,9 +17,10 @@ import {
   createWalletTool,
   createAssociateTokenTool,
   createPreviewEarningsTool,
-  createJoinPoolTool
+  createJoinPoolTool,
 } from './agent.tools.js';
 import InvestorService from '../investor/investor.service.js';
+import { systemPrompt } from '@util/prompt.js';
 
 const chatHistoryStore = new Map<string, (HumanMessage | AIMessage)[]>();
 
@@ -71,10 +72,15 @@ export class AgentService {
     this.agent = createAgent({
       model: llm,
       tools: [...this.tools, greetUserTool],
+      systemPrompt,
     });
   }
 
-  public async handleMessage(userId: string, input: string, name: string): Promise<string> {
+  public async handleMessage(
+    userId: string,
+    input: string,
+    name: string,
+  ): Promise<string> {
     await this.ready;
 
     const chat_history = chatHistoryStore.get(userId) || [];
@@ -100,9 +106,9 @@ export class AgentService {
         ? last.content
         : Array.isArray(last?.content)
           ? last.content
-            .map((p: any) => (p?.type === 'text' ? p.text : ''))
-            .join('')
-            .trim()
+              .map((p: any) => (p?.type === 'text' ? p.text : ''))
+              .join('')
+              .trim()
           : '';
 
     chat_history.push(new HumanMessage(input));
