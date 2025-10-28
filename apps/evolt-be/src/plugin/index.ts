@@ -23,7 +23,7 @@ export async function corePlugin(
   opts: FastifyPluginOptions,
 ) {
   await app.register(fastifyCors, {
-    origin: ['http://localhost:2020'],
+    origin: ['http://localhost:2020', "https://app.useevolt.xyz", "https://useevolt.xyz"],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
