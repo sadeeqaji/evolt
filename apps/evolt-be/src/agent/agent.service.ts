@@ -11,16 +11,14 @@ import {
   coreHTSPlugin,
 } from 'hedera-agent-kit';
 import {
-  createGetRwaAssetsTool,
   createGetPortfolioTool,
-  createConnectWalletTool,
   createWalletTool,
   createAssociateTokenTool,
+  createFundWalletTool,
   createPreviewEarningsTool,
-  createJoinPoolTool,
 } from './agent.tools.js';
 import InvestorService from '../investor/investor.service.js';
-import { systemPrompt } from '../util/prompt.js';
+import { systemPrompt } from '../util/util.prompt.js';
 
 const chatHistoryStore = new Map<string, (HumanMessage | AIMessage)[]>();
 
@@ -62,12 +60,10 @@ export class AgentService {
     this.tools = [
       ...stockTools,
       createWalletTool(),
-      createGetRwaAssetsTool(),
       createGetPortfolioTool(),
-      createConnectWalletTool(this.app),
       createAssociateTokenTool(this.app),
+      createFundWalletTool(this.app),
       createPreviewEarningsTool(),
-      createJoinPoolTool(),
     ];
     this.agent = createAgent({
       model: llm,

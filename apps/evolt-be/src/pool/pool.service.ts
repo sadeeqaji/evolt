@@ -12,14 +12,16 @@ interface PoolListOptions {
     page?: number;
     limit?: number;
     search?: string;
+    assetType?: "invoice" | "agriculture" | "real_estate" | "creator_ip" | "receivable";
+
 }
 
 class PoolService {
 
-    async listPools({ status = "all", page = 1, limit = 20, search }: PoolListOptions) {
+    async listPools({ status = "all", page = 1, limit = 20, search, assetType }: PoolListOptions) {
         const skip = (page - 1) * limit;
 
-        const match: Record<string, any> = { tokenized: true };
+        const match: Record<string, any> = { status: 'tokenized' };
 
         if (search) {
             match.$or = [
@@ -27,6 +29,10 @@ class PoolService {
                 { "biz.businessName": new RegExp(search, "i") },
                 { "corp.name": new RegExp(search, "i") },
             ];
+        }
+
+        if (assetType) {
+            match.assetType = assetType;
         }
 
         const base: PipelineStage[] = [
@@ -152,7 +158,7 @@ class PoolService {
             {
                 $project: {
                     _id: 1,
-                    projectName: 1,
+                    title: 1,
                     businessName: 1,
                     corporateName: 1,
                     corporateLogo: 1,

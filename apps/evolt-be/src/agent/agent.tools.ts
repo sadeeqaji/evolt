@@ -1,36 +1,172 @@
-import { tool } from '@langchain/core/tools';
-import { z } from 'zod';
-import { FastifyInstance } from 'fastify';
+import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+import { FastifyInstance } from "fastify";
 
-import poolService from '../pool/pool.service.js';
-import investorService from '../investor/investor.service.js';
-import { WalletService } from '../wallet/wallet.service.js';
-import { WalletService as WalletCreator } from '../wallet/wallet.service.js';
+import investorService from "../investor/investor.service.js";
 import assetService from "../asset/asset.service.js";
-import investmentService from '../investment/investment.service.js';
-import PinService from '../pin/pin.service.js';
+import poolService from "../pool/pool.service.js";
+import investmentService from "../investment/investment.service.js";
+import { WalletService } from "../wallet/wallet.service.js";
+import { WalletService as WalletCreator } from "../wallet/wallet.service.js";
+import PinService from "../pin/pin.service.js";
+import PaystackService from "../payment/paystack.service.js";
+import hederaService from "../hedera/hedera.service.js";
+import WhatsAppService from "../whatsapp/whatsapp.service.js";
+
+const VUSD_TOKEN_ID = process.env.HEDERA_VUSD_TOKEN_ID
 
 
-export const createGetRwaAssetsTool = () => {
-  const getRwaAssetsSchema = z.object({
-    status: z
-      .string()
-      .optional()
-      .describe("Filter by status: 'funding', 'funded', 'fully_funded'"),
-    search: z.string().optional().describe("A search term to filter pools by name"),
-    phoneNumber: z.string().describe("User phone in E.164 or WhatsApp raw"),
-
+export const createGetUserStatusTool = () => {
+  const schema = z.object({
+    phoneNumber: z.string().describe("User phone number in E.164 format."),
   });
 
   return tool(
-    async ({ status, search, phoneNumber }: z.infer<typeof getRwaAssetsSchema>) => {
+    async ({ phoneNumber }: z.infer<typeof schema>) => {
+      try {
+        await WhatsAppService.sendTypingIndicator(phoneNumber, 2500);
 
-      const hasPin = await PinService.ensurePin(phoneNumber);
-      if (!hasPin) {
-        return "🔐 Please set your transaction PIN — a WhatsApp Flow has been sent.";
+        const investor = await investorService.getInvestorByPhone(phoneNumber);
+        if (!investor?.accountId) {
+          return {
+            status: "NO_WALLET",
+            balance: 0,
+            message: "User has no wallet yet.",
+          };
+        }
+
+        const vusdBalance = await hederaService.getAccountBalance(
+          investor.accountId,
+          VUSD_TOKEN_ID
+        );
+
+        if (vusdBalance < 1) {
+          return {
+            status: "WALLET_NO_FUNDS",
+            accountId: investor.accountId,
+            balance: vusdBalance,
+            message: "User has a wallet but no funds.",
+          };
+        }
+
+        const portfolio = await investorService.getInvestorPortfolio(
+          investor.accountId
+        );
+
+        if (portfolio.pending.length > 0 || portfolio.completed.length > 0) {
+          return {
+            status: "INVESTED",
+            accountId: investor.accountId,
+            balance: vusdBalance,
+            message: "User has existing investments.",
+          };
+        }
+
+        return {
+          status: "WALLET_FUNDED",
+          accountId: investor.accountId,
+          balance: vusdBalance,
+          message: "User is ready to invest.",
+        };
+      } catch (e: any) {
+        return {
+          status: "ERROR",
+          message: `Error checking user status: ${e.message}`,
+        };
       }
-      await PinService.requestAuthorization(phoneNumber, 'Investment')
+    },
+    {
+      name: "get_user_status",
+      description:
+        "Checks if a user (by phone number) has a wallet, their balance, and investment status. This should be the FIRST tool called in any flow.",
+      schema,
+    }
+  );
+};
 
+
+export const createWalletTool = () => {
+  const schema = z.object({
+    phoneNumber: z.string().describe("User phone number in E.164 format."),
+  });
+
+  return tool(
+    async ({ phoneNumber }: z.infer<typeof schema>) => {
+      try {
+        const existing = await investorService.getInvestorByPhone(phoneNumber);
+        if (existing?.accountId) {
+          return `This user's wallet is already set up (Account ID: ${existing.accountId}).`;
+        }
+
+        await WhatsAppService.sendTypingIndicator(phoneNumber, 1500);
+        const result = await WalletCreator.createWallet(phoneNumber);
+
+        return result.message || "✅ Wallet created successfully.";
+      } catch (e: any) {
+        return `❌ Error creating wallet: ${e.message}`;
+      }
+    },
+    {
+      name: "create_wallet",
+      description:
+        "Creates a secure Evolt-managed wallet for the user. Call this when get_user_status returns 'NO_WALLET'.",
+      schema,
+    }
+  );
+};
+
+
+export const createFundWalletTool = (app: FastifyInstance) => {
+  const paystack = new PaystackService(app);
+
+  const schema = z.object({
+    phoneNumber: z.string().describe("User phone number in E.164 format."),
+    amount: z.number().positive().optional().describe("Amount to fund in USD."),
+  });
+
+  return tool(
+    async ({ phoneNumber, amount }: z.infer<typeof schema>) => {
+      try {
+        await WhatsAppService.sendTypingIndicator(phoneNumber, 2000);
+
+        const investor = await investorService.getInvestorByPhone(phoneNumber);
+        if (!investor) return "Please create your wallet before funding.";
+
+        const payment = await paystack.initializeForUser(phoneNumber, 10);
+        console.log(payment, 'payment===');
+        const { link, reference } = payment
+        return [
+          `💸 Here's your secure payment link:`,
+          `${link}`,
+          "",
+          `After payment, your digital dollar wallet will automatically update.`,
+          `Reference: ${reference}`,
+        ].join("\n");
+      } catch (e: any) {
+        return `❌ Error generating payment link: ${e.message}`;
+      }
+    },
+    {
+      name: "fund_wallet",
+      description:
+        "Generates a secure Paystack payment link to fund the user's wallet. Called when user has a wallet but insufficient funds.",
+      schema,
+    }
+  );
+};
+
+
+export const getCustomersRwaAssetsTool = () => {
+  const schema = z.object({
+    status: z
+      .string()
+      .optional()
+      .describe("Filter by 'funding', 'funded', or 'fully_funded'"),
+    search: z.string().optional().describe("Search term for pool name."),
+  });
+
+  return tool(
+    async ({ status, search }: z.infer<typeof schema>) => {
       try {
         const result = await poolService.listPools({
           status: status as any,
@@ -40,153 +176,185 @@ export const createGetRwaAssetsTool = () => {
         });
 
         const rows = result.items.map((item: any, i: number) => {
-          const y = Number(item.yieldRate ?? 0) * 100;
-          const p = Number(item.fundingProgress ?? 0);
-          const d = Number(item.daysLeft ?? 0);
-          return `${i + 1}. ${item.projectName} — Yield: ${y.toFixed(
-            0
-          )}% • Progress: ${p.toFixed(0)}% • ${d} days left`;
+          const yieldRate = (Number(item.yieldRate ?? 0) * 100).toFixed(0);
+          const progress = Number(item.fundingProgress ?? 0).toFixed(0);
+          const daysLeft = Number(item.daysLeft ?? 0);
+          return `${i + 1}. ${item.title} — Yield: ${yieldRate}% • ${progress}% funded • ${daysLeft} days left`;
         });
 
-        return rows.length ? rows.join("\n") : "No assets found.";
+        if (!rows.length) return "No available investments at the moment.";
+
+        return (
+          "📈 Here are some top investment opportunities:\n\n" +
+          rows.join("\n") +
+          "\n\nReply with a number (e.g., '1') to see more details or say 'invest 50 in 1'."
+        );
       } catch (e: any) {
-        return `Error: ${e.message}`;
+        return `❌ Error fetching assets: ${e.message}`;
       }
     },
     {
       name: "get_rwa_assets",
       description:
-        "Get a list of available real-world assets (RWAs) or investment pools. Use this to show a user what they can invest in.",
-      schema: getRwaAssetsSchema as any,
+        "Retrieves a list of available RWA investment pools for the user.",
+      schema,
     }
   );
 };
 
 
 export const createGetPortfolioTool = () => {
-  const portfolioSchema = z.object({
-    accountId: z
-      .string()
-      .describe("The user's Hedera account ID (e.g., 0.0.12345)"),
+  const schema = z.object({
+    phoneNumber: z.string().describe("User phone number in E.164 format."),
   });
 
   return tool(
-    async (input: z.infer<typeof portfolioSchema>) => {
-      const { accountId } = input;
-      if (!accountId || accountId === 'Not yet connected') {
-        return "User's wallet is not connected. Please ask them to connect their wallet first.";
-      }
-
+    async ({ phoneNumber }: z.infer<typeof schema>) => {
       try {
-        const portfolio = await investorService.getInvestorPortfolio(accountId);
-        return `Portfolio fetched: ${JSON.stringify(portfolio)}`;
-      } catch (e: any) {
-        return `Error: ${e.message}`;
-      }
-    },
-    {
-      name: 'get_portfolio',
-      description:
-        "Get the user's current investment portfolio, including pending and completed investments. Requires the user's accountId.",
-      schema: portfolioSchema as any, // 👈 fix
-    },
-  );
-};
+        await WhatsAppService.sendTypingIndicator(phoneNumber, 2000);
 
+        const investor = await investorService.getInvestorByPhone(phoneNumber);
+        if (!investor?.accountId)
+          return "Please create a wallet first before checking your portfolio.";
 
-export const createConnectWalletTool = (app: FastifyInstance) => {
-  const walletService = new WalletService(app);
-  const connectWalletSchema = z.object({
-    phoneNumber: z
-      .string()
-      .describe("The user's E.164 phone number (e.g. '+15551234567')"),
-  });
+        const portfolio = await investorService.getInvestorPortfolio(
+          investor.accountId
+        );
 
-  return tool(
-    async (input: z.infer<typeof connectWalletSchema>) => {
-      const { phoneNumber } = input;
-      try {
-        const existing = await investorService.getInvestorByPhone(phoneNumber);
-        if (existing?.accountId) {
-          return `This user's wallet is already connected (Account ID: ${existing.accountId}).`;
+        let response = "📊 *Your Portfolio Summary*\n";
+        response += `\n*Active Investments* (${portfolio.pending.length})\n`;
+        response += `Total Invested: $${portfolio.totals.tvlPending.toFixed(
+          2
+        )}\n`;
+        response += `Earnings so far: $${portfolio.totals.earningsToDatePending.toFixed(
+          2
+        )}\n`;
+
+        if (portfolio.pending.length > 0) {
+          portfolio.pending.slice(0, 3).forEach((inv: any) => {
+            response += `• ${inv.poolName}: $${inv.vusdAmount.toFixed(
+              2
+            )} (${inv.earningsPctToDate.toFixed(0)}% matured)\n`;
+          });
+        } else {
+          response += "No active investments yet.\n";
         }
 
-        const { connectLink } =
-          await walletService.initiateWalletConnect(phoneNumber);
-        return `🔗 Tap below to open your wallet and sign the verification message:\n\n${connectLink}\n\nOnce signed, your wallet will be linked automatically.`;
+        response += `\n*Completed Investments* (${portfolio.completed.length})\n`;
+        if (portfolio.completed.length > 0) {
+          portfolio.completed.slice(0, 3).forEach((inv: any) => {
+            response += `• ${inv.poolName}: $${inv.vusdAmount.toFixed(
+              2
+            )} (completed)\n`;
+          });
+        } else {
+          response += "No completed investments.\n";
+        }
+
+        return response;
       } catch (e: any) {
-        return `Error: ${e.message}`;
+        return `❌ Error fetching portfolio: ${e.message}`;
       }
     },
     {
-      name: 'connect_wallet',
+      name: "get_portfolio",
       description:
-        "Generates and sends a wallet connection link when a user asks to connect, sign up, or link their wallet. Requires the user's phone number.",
-      schema: connectWalletSchema as any,
-    },
+        "Retrieves user's portfolio (active + completed investments) based on phone number.",
+      schema,
+    }
   );
 };
 
 
-export const createWalletTool = () => {
-  const createWalletSchema = z.object({
-    userId: z
-      .string()
-      .describe(
-        'A unique identifier for the user, such as their phone number.',
-      ),
+export const createInvestInAssetTool = () => {
+  const schema = z.object({
+    phoneNumber: z.string().describe("User phone in E.164 or WhatsApp raw."),
+    assetId: z.string().describe("Asset _id from get_rwa_assets."),
+    amount: z.number().positive().describe("Investment amount in VUSD."),
   });
 
   return tool(
-    async (input: z.infer<typeof createWalletSchema>) => {
-      const { userId } = input;
-      try {
-        const result = await WalletCreator.createWallet(userId);
-        return result.message;
-      } catch (e: any) {
-        return `Error: ${e.message}`;
-      }
+    async ({ phoneNumber, assetId, amount }: z.infer<typeof schema>) => {
+      const investor = await investorService.getInvestorByPhone(phoneNumber);
+      if (!investor?.accountId)
+        return "No wallet connected. Please create a wallet first.";
+
+      const hasPin = await PinService.ensurePin(phoneNumber);
+      if (!hasPin)
+        return "🔐 Please set your 4-digit PIN first. I’ve sent a WhatsApp Flow to help you do that.";
+
+      const vusdBalance = await hederaService.getAccountBalance(
+        investor.accountId,
+        VUSD_TOKEN_ID
+      );
+
+      if (vusdBalance < amount)
+        return `You have $${vusdBalance.toFixed(
+          2
+        )}, but need $${amount}. Would you like to fund your wallet?`;
+
+      await PinService.requestAuthorization(phoneNumber, `Invest $${amount}`);
+
+      const asset = await assetService.getAssetById(assetId);
+      if (!asset) return "Asset not found.";
+
+      const yieldRate = Number(asset.yieldRate || 0.1);
+      const expectedYield = Number((amount * yieldRate).toFixed(2));
+      const maturedAt = new Date(
+        Date.now() + (asset.durationDays ?? 90) * 86400000
+      );
+
+      return [
+        "✅ Investment initiated successfully!",
+        `• Asset: ${asset.title}`,
+        `• Amount: $${amount}`,
+        `• Expected Earnings: ~$${expectedYield}`,
+        `• Maturity: ${maturedAt.toDateString()}`,
+        "",
+        "Your WhatsApp Flow PIN confirmation will finalize this investment.",
+      ].join("\n");
     },
     {
-      name: 'create_wallet',
+      name: "invest_in_asset",
       description:
-        'Creates a new Hedera wallet (alias-based) for a user. Requires a unique user ID (like their phone number).',
-      schema: createWalletSchema as any, // 👈 fix
-    },
+        "Initiates an investment in a selected RWA asset. Requires wallet, sufficient balance, and PIN confirmation via WhatsApp.",
+      schema,
+    }
   );
 };
+
 
 export const createAssociateTokenTool = (_app: FastifyInstance) => {
   const schema = z.object({
-    phoneNumber: z.string().describe("User phone in E.164 or raw WhatsApp format"),
-    tokenId: z.string().describe("HTS token ID (e.g., 0.0.123456)"),
+    phoneNumber: z.string().describe("User phone number in E.164 format."),
+    tokenId: z.string().describe("Asset Token ID (e.g., 0.0.123456)"),
   });
 
   return tool(
     async ({ phoneNumber, tokenId }) => {
       try {
         const res = await WalletService.associateTokenFor(phoneNumber, tokenId);
-        return typeof res?.message === "string"
-          ? res.message
-          : `Association completed for ${phoneNumber} -> ${tokenId}`;
+        return (
+          res?.message ||
+          `✅ Token association completed for ${phoneNumber} → ${tokenId}`
+        );
       } catch (e: any) {
-        return `Error associating token: ${e.message}`;
+        return `❌ Error associating token: ${e.message}`;
       }
     },
     {
       name: "associate_token",
       description:
-        "Associate a user's Hedera account with an HTS token. Use when the user says 'associate' / 'link' to a token. Requires phoneNumber and tokenId.",
-      schema: schema as any,
+        "Associates a user's wallet with an HTS token. Used when investments fail due to association errors.",
+      schema,
     }
   );
 };
 
-
 export const createPreviewEarningsTool = () => {
   const schema = z.object({
     assetId: z.string().describe("The Asset _id"),
-    amount: z.number().positive().describe("User's invest amount in VUSD"),
+    amount: z.number().positive().describe("Investment amount in VUSD."),
   });
 
   return tool(
@@ -194,94 +362,26 @@ export const createPreviewEarningsTool = () => {
       const asset = await assetService.getAssetById(assetId);
       if (!asset) return "Asset not found.";
 
-      const face = Number(asset.amount || 0);
-      const yieldRate = Number(asset.yieldRate || 0);
+      const yieldRate = Number(asset.yieldRate || 0.1);
       const durationDays = Number(asset.durationDays || 90);
-      const totalTarget = Number(asset.totalTarget || 0);
-
-      const purchase = totalTarget || (yieldRate ? face * (1 - yieldRate) : face);
-      const profitPool = Math.max(0, face - purchase);
-      const expected = purchase > 0 ? (amount / purchase) * profitPool : 0;
-
-      const expected2dp = Math.round(expected * 100) / 100;
+      const expectedProfit = Number((amount * yieldRate).toFixed(2));
 
       return [
-        `Preview for ${asset.assetType?.toUpperCase() || "asset"}:`,
-        `• Face Value: $${face.toLocaleString()}`,
-        `• Discount: ${(yieldRate * 100).toFixed(0)}%  → Purchase: $${purchase.toLocaleString()}`,
-        `• Profit Pool: $${profitPool.toLocaleString()}`,
-        `• Your Investment: $${amount.toFixed(2)} → Expected Earnings ≈ $${expected2dp.toFixed(2)} at maturity (~${durationDays} days).`,
-        ``,
-        `Note: This uses proportional profit-share. Actual on-chain settlement happens at maturity.`,
+        `📊 Here's a preview for investing $${amount.toFixed(2)} in *${asset.title}*:`,
+        `• Yield: ${(yieldRate * 100).toFixed(0)}%`,
+        `• Duration: ~${durationDays} days`,
+        `• Expected Profit: ~$${expectedProfit.toFixed(2)}`,
+        "",
+        `At maturity, you’ll receive ~$${(amount + expectedProfit).toFixed(
+          2
+        )}.`,
       ].join("\n");
     },
     {
       name: "preview_earnings",
       description:
-        "Calculate and explain expected earnings for a given asset and amount (2 decimal places).",
-      schema: schema as any,
+        "Calculates and explains expected profit for a given asset and investment amount.",
+      schema,
     }
   );
 };
-
-
-export const createJoinPoolTool = () => {
-  const schema = z.object({
-    phoneNumber: z.string().describe("User phone in E.164 or WhatsApp raw"),
-    assetId: z.string().describe("Asset _id to invest in"),
-    amount: z.number().positive().describe("Amount in VUSD"),
-    txId: z.string().optional().describe("Hedera transaction id of user's vUSD → escrow transfer"),
-  });
-
-  return tool(
-    async ({ phoneNumber, assetId, amount, txId }: z.infer<typeof schema>) => {
-      // 1) Resolve investor
-      const investor = await investorService.getInvestorByPhone(phoneNumber);
-      if (!investor?.accountId) {
-        return "Your wallet is not connected yet. Please connect your wallet first.";
-      }
-      const investorId = String(investor._id);
-      const accountId = investor.accountId;
-      const hasPin = await PinService.ensurePin(phoneNumber);
-      if (!hasPin) {
-        return "🔐 Please set your transaction PIN — a WhatsApp Flow has been sent.";
-      }
-
-      if (txId) {
-        try {
-          const res = await investmentService.investFromDeposit(
-            { accountId, investorId },
-            { assetId, txId }
-          );
-          const inv = res?.investment;
-          const earned = Number(inv?.expectedYield || 0);
-          return [
-            "✅ Investment recorded on-chain.",
-            `• Amount: $${Number(inv?.vusdAmount || amount).toFixed(2)} VUSD`,
-            `• Expected Earnings: $${earned.toFixed(2)} VUSD`,
-            `• Maturity: ${inv?.maturedAt ? new Date(inv.maturedAt).toDateString() : "~"}`
-          ].join("\n");
-        } catch (e: any) {
-          return `Error finalizing investment: ${e?.message || String(e)}`;
-        }
-      }
-
-
-      return [
-        "Almost there! To join this pool:",
-        "1) Open the app and send your VUSD to the escrow (you’ll get a transaction id).",
-        "2) Paste the transaction id here and I’ll record your investment.",
-        "",
-        "If you don’t have VUSD yet, reply: TOPUP to fund via card/transfer.",
-      ].join("\n");
-    },
-    {
-      name: "join_pool",
-      description:
-        "Record an investment for a user. If txId is provided, finalizes the investment by verifying the vUSD→escrow transfer on the mirror node.",
-      schema: schema as any,
-    }
-  );
-};
-
-
