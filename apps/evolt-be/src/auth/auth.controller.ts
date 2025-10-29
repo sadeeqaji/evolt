@@ -64,7 +64,10 @@ class AuthController {
         secure: false,
         sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 7,
-        domain: 'localhost',
+        domain:
+          process.env.NODE_ENV === 'development'
+            ? 'localhost'
+            : '.useevolt.xyz',
       });
     }
 
