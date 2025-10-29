@@ -25,13 +25,13 @@ export class PaystackService {
         });
     }
 
-    /**
-     * Internal helper for all Paystack requests
-     */
+    /** ------------------------------------------------------------------
+     * 🧩 Internal generic request handler
+     * ------------------------------------------------------------------ */
     private async _request<T>(
         method: 'POST' | 'GET',
         endpoint: string,
-        data?: any,
+        data?: any
     ): Promise<T> {
         try {
             const response = await this.axiosInstance.request<T>({
@@ -46,15 +46,15 @@ export class PaystackService {
         }
     }
 
-    /**
-     * Initialize a transaction
-     */
+    /** ------------------------------------------------------------------
+     * 💳 Initialize a transaction (card, transfer, or mobile payment)
+     * ------------------------------------------------------------------ */
     async initializeTransaction(payload: PaystackInitTransactionPayload) {
         try {
             const res = await this._request<{ data: any }>(
                 'POST',
                 '/transaction/initialize',
-                payload,
+                payload
             );
             return res.data;
         } catch (error: any) {
@@ -63,22 +63,32 @@ export class PaystackService {
         }
     }
 
-    /**
-     * Charge card
-     */
-    async chargeCard(payload: CardChargePayload) {
-        try {
-            const res = await this._request<{ data: any }>('POST', '/charge', payload);
-            return res.data;
-        } catch (error: any) {
-            this.fastify.log.error('[Paystack] chargeCard failed', error);
-            throw error;
-        }
+    /** ------------------------------------------------------------------
+     * 💳 Initialize a transaction for a specific phoneNumber (Evolt)
+     * ------------------------------------------------------------------ */
+    async initializeForUser(phoneNumber: string, amountUsd: number) {
+        const amountInKobo = Math.round(amountUsd * 100 * 1500); // 1 USD ≈ ₦1500 for now
+
+        const payload: PaystackInitTransactionPayload = {
+            email: `${phoneNumber.replace('+', '')}@useevolt.xyz`,
+            amount: amountInKobo.toString(),
+            currency: 'NGN',
+            metadata: {
+                phoneNumber,
+                source: 'Evolt WhatsApp Funding',
+            },
+        };
+
+        const response = await this.initializeTransaction(payload);
+        return {
+            link: response.authorization_url,
+            reference: response.reference,
+        };
     }
 
-    /**
-     * Generate virtual bank transfer
-     */
+    /** ------------------------------------------------------------------
+     * 🏦 Generate a virtual bank transfer account
+     * ------------------------------------------------------------------ */
     async generateBankTransfer(payload: BankTransferPayload) {
         try {
             const res = await this._request<{ data: any }>('POST', '/charge', {
@@ -94,7 +104,22 @@ export class PaystackService {
         }
     }
 
+    /** ------------------------------------------------------------------
+     * 💳 Charge a card manually
+     * ------------------------------------------------------------------ */
+    async chargeCard(payload: CardChargePayload) {
+        try {
+            const res = await this._request<{ data: any }>('POST', '/charge', payload);
+            return res.data;
+        } catch (error: any) {
+            this.fastify.log.error('[Paystack] chargeCard failed', error);
+            throw error;
+        }
+    }
 
+    /** ------------------------------------------------------------------
+     * 🧠 Handle API errors consistently
+     * ------------------------------------------------------------------ */
     private handleError(error: unknown, endpoint?: string): void {
         if (axios.isAxiosError(error)) {
             const err = error as AxiosError<any>;
@@ -110,3 +135,5 @@ export class PaystackService {
         }
     }
 }
+
+export default PaystackService;
