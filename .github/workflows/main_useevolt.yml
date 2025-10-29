@@ -19,10 +19,8 @@ jobs:
       WORKDIR: apps/evolt-be
 
     steps:
-      # 1️⃣ Checkout the repository
       - uses: actions/checkout@v4
 
-      # 2️⃣ Set up Node.js with Yarn cache
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -30,25 +28,20 @@ jobs:
           cache: "yarn"
           cache-dependency-path: "yarn.lock"
 
-      # 3️⃣ Install all dependencies (including devDependencies)
-      - name: Install dependencies
+      - name: Install dependencies (with devDependencies)
         working-directory: ${{ env.WORKDIR }}
         run: yarn install --frozen-lockfile
 
-      # 4️⃣ Build TypeScript project
       - name: Build project
         working-directory: ${{ env.WORKDIR }}
         run: yarn build
 
-      # 5️⃣ Prune devDependencies to keep only production deps
-      - name: Prune devDependencies
+      - name: Prepare production artifact
         working-directory: ${{ env.WORKDIR }}
         run: |
-          yarn install --production --ignore-scripts --prefer-offline
-          # Clean up files not needed in production
           rm -rf src test .husky .eslint* .prettier* tsconfig.json jest.config.js
+          echo "✅ Ready to deploy with node_modules intact"
 
-      # 6️⃣ Upload ready-to-deploy artifact (includes dist + node_modules)
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -64,14 +57,12 @@ jobs:
       contents: read
 
     steps:
-      # 7️⃣ Download the build artifact from previous job
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           name: evolt-be
           path: ./deploy
 
-      # 8️⃣ Log in to Azure
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -79,7 +70,6 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_BD5589DF03BB4DDE81F7EE8EF0A9CC2A }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_7B7886D8665745218F696E8EDF748949 }}
 
-      # 9️⃣ Deploy to Azure Web App
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
