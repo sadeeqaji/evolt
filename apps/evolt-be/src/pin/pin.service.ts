@@ -9,8 +9,8 @@ import whatsappService from "../whatsapp/whatsapp.service.js";
  * and authorization verification for sensitive transactions.
  */
 
-const FLOW_ID_SETUP_PIN = 2019102395595026;
-const FLOW_ID_ENTER_TRANSACTION = 1096917475849034;
+const FLOW_ID_SETUP_PIN = 825971416509314;
+const FLOW_ID_ENTER_TRANSACTION = 1183982320271062;
 
 export class PinService {
 
