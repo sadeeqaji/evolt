@@ -12,13 +12,17 @@ import { storeUserKey, getUserKey } from "../util/util.manage-key.js";
 import crypto from "crypto";
 import { FastifyInstance } from "fastify";
 import InvestorService from "../investor/investor.service.js";
+import hederaService from "hedera/hedera.service.js";
+import investorService from "../investor/investor.service.js";
+import SwapService from "../swap/swap.service.js"
 
 const TREASURY_ID = process.env.HEDERA_OPERATOR_ID!;
 const TREASURY_KEY = process.env.HEDERA_OPERATOR_KEY!;
+const VUSD_TOKEN_ID = process.env.HEDERA_VUSD_TOKEN_ID!;
 
 const hederaClient = Client.forTestnet().setOperator(
     TREASURY_ID,
-    PrivateKey.fromString(TREASURY_KEY)
+    TREASURY_KEY
 );
 
 export class WalletService {
@@ -37,9 +41,8 @@ export class WalletService {
             const receipt = await tx.getReceipt(hederaClient);
             const accountId = receipt.accountId?.toString();
             if (!accountId) throw new Error("Account creation receipt missing accountId");
-
             await storeUserKey(phoneNumber, privateKey);
-
+            await this.associateTokenFor(accountId, VUSD_TOKEN_ID)
             try {
                 await InvestorService.linkAccountId(phoneNumber, accountId, publicKey.toStringRaw());
             } catch (_) { /* non-fatal */ }
@@ -82,9 +85,7 @@ export class WalletService {
             .then(tx => tx.getReceipt(hederaClient));
     }
 
-
     static async associateTokenFor(phoneNumber: string, tokenId: string) {
-        // 1) Look up investor + key
         const investor = await InvestorService.getInvestorByPhone(phoneNumber);
         if (!investor?.accountId)
             throw new Error("No Hedera account linked. Ask the user to create/connect a wallet.");
@@ -95,7 +96,6 @@ export class WalletService {
         const accountId = investor.accountId;
         const token = TokenId.fromString(tokenId);
 
-        // 2) Avoid duplicate association
         const info = await new AccountInfoQuery().setAccountId(accountId).execute(hederaClient);
         const already = info.tokenRelationships.get(token.toString());
         if (already) {
@@ -122,6 +122,17 @@ export class WalletService {
             status: receipt.status.toString(),
             message: `✅ Associated ${accountId} with ${tokenId} (status: ${receipt.status.toString()}).`
         };
+    }
+
+    static async credit(phoneNumber: string, amountUsd: number) {
+        const investor = await investorService.getInvestorByPhone(phoneNumber);
+        if (!investor?.accountId) throw new Error("Wallet not found");
+
+        await this.associateTokenFor(phoneNumber, VUSD_TOKEN_ID)
+
+        await SwapService.transferOrMintVUSD({ to: investor.accountId, amount: amountUsd });
+
+        return { success: true, message: `Wallet credited with $${amountUsd}` };
     }
 }
 

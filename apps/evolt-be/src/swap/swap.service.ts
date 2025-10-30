@@ -4,9 +4,12 @@ import {
     TokenMintTransaction,
     TransferTransaction,
     TransactionReceipt,
+    AccountId,
+    PrivateKey
 } from "@hashgraph/sdk";
 import { normalizeTxId } from "../util/util.hedera.js";
 import axios from "axios";
+import { getUserKey } from "../util/util.manage-key.js";
 
 const OPERATOR_ID = process.env.HEDERA_OPERATOR_ID!;
 const OPERATOR_KEY = process.env.HEDERA_OPERATOR_KEY!;
@@ -96,8 +99,12 @@ class SwapService {
     }
 
 
-    private async transferOrMintVUSD({ to, amount }: { to: string; amount: number }) {
-        const vusdUnits = toUnits(amount, "VUSD");
+
+
+    async transferOrMintVUSD({ to, amount }: { to: string; amount: number }) {
+
+        const vusdUnits = amount * 1e6;
+
         try {
             const tx = await new TransferTransaction()
                 .addTokenTransfer(TOKENS.VUSD, TREASURY, -vusdUnits)
@@ -119,6 +126,36 @@ class SwapService {
             await pay.getReceipt(client);
             return { minted: true, transferred: true };
         }
+    }
+
+
+
+
+    async transferVusdFromUserToTreasury(params: {
+        phoneNumber: string;
+        fromAccountId: string;
+        amountUsd: number;
+    }): Promise<{ txId: string; receipt: TransactionReceipt }> {
+        const { phoneNumber, fromAccountId, amountUsd } = params;
+        if (!Number.isFinite(amountUsd) || amountUsd <= 0) throw new Error("Invalid amount");
+
+        const userKey: PrivateKey = await getUserKey(phoneNumber);
+        const userAccountId = AccountId.fromString(fromAccountId);
+        const userClient = Client.forTestnet().setOperator(userAccountId, userKey);
+
+        const token = TOKENS.VUSD;
+        const units = toUnits(amountUsd, "VUSD");
+
+
+        const tx = await new TransferTransaction()
+            .addTokenTransfer(token, userAccountId, -units)
+            .addTokenTransfer(token, AccountId.fromString(TREASURY), units)
+            .freezeWith(userClient)
+            .sign(userKey);
+
+        const resp = await tx.execute(userClient);
+        const receipt = await resp.getReceipt(userClient);
+        return { txId: resp.transactionId.toString(), receipt };
     }
 
     /* =======================================================
@@ -151,14 +188,13 @@ class SwapService {
         const tokenId = token === "USDC" ? USDC_TOKEN_ID : USDT_TOKEN_ID;
         const expected = toUnits(amount, token);
 
-        const res = await this.verifyTransfer({
+        await this.verifyTransfer({
             txId,
             tokenId,
             from: investorAccountId,
             to: TREASURY,
             expectedUnits: expected,
         });
-        console.log(res)
         const result = await this.transferOrMintVUSD({ to: investorAccountId, amount });
         return { success: true, direction: "deposit", data: result };
     }

@@ -12,6 +12,7 @@ import swapRoutes from "./swap/swap.route.js";
 import assetRoutes from "./asset/asset.route.js";
 import walletRoutes from "./wallet/wallet.route.js";
 import whatsappRoutes from "./whatsapp/whatsapp.route.js";
+import paystackRoutes from "./payment/paystack.route.js";
 
 export const indexRoute = async (app: FastifyInstance) => {
     app.register(authRoutes, { prefix: "/api/v1/auth" });
@@ -29,6 +30,9 @@ export const indexRoute = async (app: FastifyInstance) => {
     app.register(investorRoutes, { prefix: "/api/v1/investor" });
 
     app.register(invoiceRoutes, { prefix: '/api/v1/invoice' });
+
+    app.register(paystackRoutes, { prefix: "/api/v1/paystack" });
+
 
     app.register(poolRoutes, { prefix: "/api/v1/pool" });
 

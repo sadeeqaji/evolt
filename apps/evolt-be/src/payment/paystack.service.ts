@@ -66,15 +66,15 @@ export class PaystackService {
     /** ------------------------------------------------------------------
      * 💳 Initialize a transaction for a specific phoneNumber (Evolt)
      * ------------------------------------------------------------------ */
-    async initializeForUser(phoneNumber: string, amountUsd: number) {
+    async initializeForUser(phone: string, amountUsd: number) {
         const amountInKobo = Math.round(amountUsd * 100 * 1500); // 1 USD ≈ ₦1500 for now
 
         const payload: PaystackInitTransactionPayload = {
-            email: `${phoneNumber.replace('+', '')}@useevolt.xyz`,
+            email: `${phone.replace('+', '')}@useevolt.xyz`,
             amount: amountInKobo.toString(),
             currency: 'NGN',
             metadata: {
-                phoneNumber,
+                phone,
                 source: 'Evolt WhatsApp Funding',
             },
         };
@@ -134,6 +134,9 @@ export class PaystackService {
             console.error('❌ Unexpected Paystack Error:', error);
         }
     }
+
+
+
 }
 
 export default PaystackService;

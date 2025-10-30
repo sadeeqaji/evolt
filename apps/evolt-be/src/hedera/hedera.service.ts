@@ -28,7 +28,7 @@ class HederaService {
    */
   async transferToken(params: {
     senderId: string;
-    senderPrivateKey: string;
+    senderPrivateKey: PrivateKey;
     receiverId: string;
     tokenId: string;
     amount: number;
@@ -36,18 +36,18 @@ class HederaService {
     const { senderId, senderPrivateKey, receiverId, tokenId, amount } = params;
 
     const senderAccountId = AccountId.fromString(senderId);
-    const senderKey = PrivateKey.fromString(senderPrivateKey);
+    // const senderKey = PrivateKey.fromString(senderPrivateKey);
     const receiverAccountId = AccountId.fromString(receiverId);
     const token = TokenId.fromString(tokenId);
 
-    this.client.setOperator(senderAccountId, senderKey);
+    this.client.setOperator(senderAccountId, senderPrivateKey);
 
     const transaction = new TransferTransaction()
       .addTokenTransfer(token, senderAccountId, -amount)
       .addTokenTransfer(token, receiverAccountId, amount)
       .freezeWith(this.client);
 
-    const signedTx = await transaction.sign(senderKey);
+    const signedTx = await transaction.sign(senderPrivateKey);
     const txResponse = await signedTx.execute(this.client);
     const receipt = await txResponse.getReceipt(this.client);
 
@@ -64,14 +64,14 @@ class HederaService {
     const balance = await new AccountBalanceQuery()
       .setAccountId(accountId)
       .execute(this.client);
-
+    console.log(tokenId);
     if (tokenId) {
       const token = TokenId.fromString(tokenId);
       const tokenBalance =
         balance.tokens?._map.get(token.toString())?.toNumber() || 0;
-      return tokenBalance / 1e6; // convert tiny units → full tokens
+      return tokenBalance / 1e6;
     }
-
+    console.log(balance, 'balance');
     return balance.hbars.toBigNumber().toNumber();
   }
 }
