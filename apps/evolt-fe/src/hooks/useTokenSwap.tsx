@@ -87,7 +87,6 @@ export function useTokenSwap(): UseTokenSwapResult {
           return false;
         }
 
-        // 4️⃣ Notify backend
         await apiClient.post("/swap/deposit/settle", {
           investorAccountId: userAccountId,
           token: "USDC",
