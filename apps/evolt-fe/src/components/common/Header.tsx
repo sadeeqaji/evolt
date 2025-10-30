@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { SignDialog } from "./SignModal";
 import { useHWBridge } from "./HWBridgeClientProvider";
+import Image from "next/image";
 
 const Header = () => {
   const { accountId, connect, disconnect } = useHWBridge();
@@ -44,11 +45,15 @@ const Header = () => {
   return (
     <>
       <header className="flex items-center justify-between py-4 max-w-6xl m-auto">
-        <div className="flex items-center gap-2">
-          <Link href="/">
-            <Logo />
-          </Link>
-        </div>
+        <Link href="/" className="flex items-center gap-2">
+          <Image
+            src="/logo_new.png"
+            alt="Evolt Logo"
+            width={200}
+            height={50}
+            priority
+          />
+        </Link>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-4 lg:gap-6">

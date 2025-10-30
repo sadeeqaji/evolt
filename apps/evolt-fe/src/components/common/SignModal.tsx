@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import apiClient from "@evolt/lib/apiClient";
 import { Button } from "../ui/button";
 import { useHWBridge } from "./HWBridgeClientProvider";
+import { useQueryClient } from "@tanstack/react-query";
 
 export async function authenticateUser(payload: {
   message: string;
@@ -31,8 +32,9 @@ interface SignDialogProps {
 
 export function SignDialog({ open, onOpenChange, accountId }: SignDialogProps) {
   const [loading, setLoading] = useState(false);
-
+  const queryClient = useQueryClient();
   const { sdk, publicKey } = useHWBridge();
+
   const handleAuthenticate = async () => {
     try {
       setLoading(true);
@@ -52,11 +54,15 @@ export function SignDialog({ open, onOpenChange, accountId }: SignDialogProps) {
       sessionStorage.setItem("accessToken", result);
 
       toast.success("Authenticated successfully 🎉");
+
+      await queryClient.invalidateQueries();
+
       onOpenChange(false);
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
+      onOpenChange(false);
     }
   };
   return (

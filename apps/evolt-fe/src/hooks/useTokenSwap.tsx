@@ -1,5 +1,12 @@
 import { useState, useCallback } from "react";
-import { TransferTransaction, TokenId, TransactionId } from "@hashgraph/sdk";
+import {
+  TransferTransaction,
+  TokenId,
+  Client,
+  TransactionId,
+  TransactionReceiptQuery,
+  LedgerId,
+} from "@hashgraph/sdk";
 import { useHWBridge } from "@evolt/components/common/HWBridgeClientProvider";
 import { transactionToBase64String } from "@evolt/lib/utils";
 import apiClient from "@evolt/lib/apiClient";
@@ -13,9 +20,8 @@ interface SwapParams {
 
 interface UseTokenSwapResult {
   loading: boolean;
-  error: string | null;
   success: boolean;
-  swap: (params: SwapParams) => Promise<void>;
+  swap: (params: SwapParams) => Promise<boolean>;
 }
 
 /**
@@ -25,57 +31,81 @@ interface UseTokenSwapResult {
  */
 export function useTokenSwap(): UseTokenSwapResult {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const { sdk } = useHWBridge();
-  const swap = useCallback(async (params: SwapParams) => {
-    const { usdcTokenId, userAccountId, treasuryAccountId, amount } = params;
-    const convertedAmount = amount * 1e6;
-    try {
-      setLoading(true);
-      setError(null);
-      setSuccess(false);
 
-      const usdcTx = new TransferTransaction()
-        .addTokenTransfer(
-          TokenId.fromString(usdcTokenId),
-          userAccountId,
-          -convertedAmount
-        )
-        .addTokenTransfer(
-          TokenId.fromString(usdcTokenId),
-          treasuryAccountId,
-          convertedAmount
-        )
-        .setTransactionId(TransactionId.generate(userAccountId));
+  const swap = useCallback(
+    async (params: SwapParams): Promise<boolean> => {
+      const { usdcTokenId, userAccountId, treasuryAccountId, amount } = params;
+      const convertedAmount = amount * 1e6;
 
       try {
+        setLoading(true);
+        setSuccess(false);
+
+        // 1️⃣ Create USDC transfer transaction
+        const usdcTx = new TransferTransaction()
+          .addTokenTransfer(
+            TokenId.fromString(usdcTokenId),
+            userAccountId,
+            -convertedAmount
+          )
+          .addTokenTransfer(
+            TokenId.fromString(usdcTokenId),
+            treasuryAccountId,
+            convertedAmount
+          )
+          .setTransactionId(TransactionId.generate(userAccountId));
+
+        // 2️⃣ Sign and execute through Hashinals WalletConnect SDK
         const trans: any = await sdk?.dAppConnector.signAndExecuteTransaction({
           signerAccountId: userAccountId,
           transactionList: transactionToBase64String(usdcTx),
         });
 
+        if (!trans?.transactionId) {
+          console.error("Transaction broadcast failed:", trans);
+          return false;
+        }
+
+        // 3️⃣ Verify transaction receipt on Hedera
+        const txId = TransactionId.fromString(trans.transactionId);
+        const client = Client.forTestnet();
+        client.setLedgerId(LedgerId.TESTNET);
+
+        const receipt = await new TransactionReceiptQuery()
+          .setTransactionId(txId)
+          .execute(client);
+
+        console.log({ receipt });
+
+        if (receipt.status.toString() !== "SUCCESS") {
+          console.error(
+            "Transaction not confirmed:",
+            receipt.status.toString()
+          );
+          return false;
+        }
+
+        // 4️⃣ Notify backend
         await apiClient.post("/swap/deposit/settle", {
           investorAccountId: userAccountId,
           token: "USDC",
           amount,
-          txId: trans?.transactionId,
+          txId: trans.transactionId,
         });
-      } catch (hederaErr) {
-        console.warn(
-          "Hedera transaction failed, proceeding anyway:",
-          hederaErr
-        );
+
+        setSuccess(true);
+        return true;
+      } catch (err: any) {
+        console.error("Swap error:", err);
+        return false;
+      } finally {
+        setLoading(false);
       }
+    },
+    [sdk]
+  );
 
-      setSuccess(true);
-    } catch (err: any) {
-      console.error("Swap error:", err);
-      setError(err.message || "Swap failed");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  return { loading, error, success, swap };
+  return { loading, success, swap };
 }

@@ -8,18 +8,22 @@ let sdkInstance: HashinalsWalletConnectSDK | null = null;
 let initialized = false;
 
 export async function getHashinalsSDK() {
-  if (sdkInstance && initialized) return sdkInstance;
+  try {
+    if (sdkInstance && initialized) return sdkInstance;
 
-  const metadata = {
-    name: "Evolt",
-    description: "Evolt - Real World Assets for Africa",
-    icons: [logoUrl],
-    url: typeof window !== "undefined" ? window.location.href : "",
-  };
+    const metadata = {
+      name: "Evolt",
+      description: "Evolt - Real World Assets for Africa",
+      icons: [logoUrl],
+      url: "",
+    };
 
-  sdkInstance = HashinalsWalletConnectSDK.getInstance();
-  await sdkInstance.init(projectId, metadata, LedgerId.TESTNET);
-  initialized = true;
+    sdkInstance = HashinalsWalletConnectSDK.getInstance();
+    await sdkInstance.init(projectId, metadata, LedgerId.TESTNET);
+    initialized = true;
 
-  return sdkInstance;
+    return sdkInstance;
+  } catch (error) {
+    console.log(error);
+  }
 }

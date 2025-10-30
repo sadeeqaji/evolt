@@ -57,6 +57,7 @@ export const TokenSwap = () => {
         depositAmount={depositAmount}
         vusdAmount={vusdAmount}
         onProceedToCheckout={handleProceedToCheckout}
+        onDepositAmountChange={handleDepositAmountChange} // <-- Add this prop
       />
 
       {/* <Dialog open={showDepositModal} onOpenChange={setShowDepositModal}>

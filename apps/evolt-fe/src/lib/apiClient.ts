@@ -17,4 +17,25 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const { status, config } = error.response ?? {};
+
+    if (status === 401) {
+      const isAuthRoute =
+        config.url.includes("/auth/login") ||
+        config.url.includes("/auth/nonce") ||
+        config.url.includes("/auth/verify-signature");
+
+      if (!isAuthRoute) {
+        console.warn("API Client: Received 401, dispatching auth event.");
+        window.dispatchEvent(new Event("auth:unauthorized"));
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 export default apiClient;

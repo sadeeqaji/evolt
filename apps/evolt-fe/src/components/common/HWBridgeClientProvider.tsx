@@ -9,9 +9,9 @@ import React, {
 } from "react";
 import Header from "@evolt/components/common/Header";
 import PageLoader from "./PageLoader";
-// Remove the static import from here:
-// import { getHashinalsSDK } from "@evolt/lib/hashinalsClient";
+
 import { HashinalsWalletConnectSDK } from "@hashgraphonline/hashinal-wc";
+import { SignDialog } from "./SignModal";
 
 interface HWBridgeContextType {
   sdk: HashinalsWalletConnectSDK | null;
@@ -22,6 +22,7 @@ interface HWBridgeContextType {
     publicKey: string | null;
   }>;
   disconnect: () => Promise<void>;
+  openSignModal: () => void;
 }
 
 const HWBridgeContext = createContext<HWBridgeContextType | undefined>(
@@ -37,6 +38,8 @@ export function HWBridgeClientProvider({
   const [accountId, setAccountId] = useState<string | null>(null);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSignModalOpen, setIsSignModalOpen] = useState(false);
+  const openSignModal = useCallback(() => setIsSignModalOpen(true), []);
 
   useEffect(() => {
     let mounted = true;
@@ -44,10 +47,11 @@ export function HWBridgeClientProvider({
     async function init() {
       try {
         const { getHashinalsSDK } = await import("@evolt/lib/hashinalsClient");
+
         const instance = await getHashinalsSDK();
 
-        if (!mounted) return;
-        setSdk(instance);
+        if (!mounted && instance) return;
+        setSdk(instance!);
 
         const storedAccountId = localStorage.getItem("connectedAccountId");
         const storedPublicKey = localStorage.getItem("connectedPublicKey");
@@ -67,6 +71,19 @@ export function HWBridgeClientProvider({
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      if (accountId && !isSignModalOpen) {
+        openSignModal();
+      }
+    };
+
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+    return () => {
+      window.removeEventListener("auth:unauthorized", handleUnauthorized);
+    };
+  }, [accountId, openSignModal]);
 
   const extractAccountId = (session: any): string | null => {
     const accounts = session?.namespaces?.hedera?.accounts;
@@ -96,7 +113,7 @@ export function HWBridgeClientProvider({
       console.error("Connection failed:", err);
       return { accountId: null, publicKey: null };
     }
-  }, [sdk]);
+  }, [sdk, openSignModal]);
 
   const disconnect = useCallback(async () => {
     if (!sdk) return;
@@ -107,6 +124,7 @@ export function HWBridgeClientProvider({
     } finally {
       localStorage.removeItem("connectedAccountId");
       localStorage.removeItem("connectedPublicKey");
+      sessionStorage.removeItem("accessToken");
       setAccountId(null);
       setPublicKey(null);
     }
@@ -116,10 +134,16 @@ export function HWBridgeClientProvider({
 
   return (
     <HWBridgeContext.Provider
-      value={{ sdk, accountId, publicKey, connect, disconnect }}
+      value={{ sdk, accountId, publicKey, connect, disconnect, openSignModal }}
     >
       <Header />
       {children}
+
+      <SignDialog
+        open={isSignModalOpen && !!accountId}
+        onOpenChange={setIsSignModalOpen}
+        accountId={accountId!}
+      />
     </HWBridgeContext.Provider>
   );
 }

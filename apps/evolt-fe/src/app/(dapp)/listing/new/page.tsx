@@ -12,12 +12,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@evolt/components/ui/select";
-import { Label } from "@evolt/components/ui/label";
-import { Upload, Info, HardDrive, FileText, CheckCircle2 } from "lucide-react";
+import { format } from "date-fns";
+import { Textarea } from "@evolt/components/ui/textarea";
+import {
+  Upload,
+  Info,
+  HardDrive,
+  FileText,
+  CheckCircle2,
+  Calendar,
+} from "lucide-react";
 import { toast } from "sonner";
 import apiClient from "@evolt/lib/apiClient";
-import { Textarea } from "@evolt/components/ui/textarea";
-
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@evolt/components/ui/form";
+import { cn } from "@evolt/lib/utils";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@evolt/components/ui/popover";
+import { Calendar as CalendarComponent } from "@evolt/components/ui/calendar";
 const assetTypes = [
   { title: "Invoice", type: "invoice" },
   { title: "Real Estate", type: "real_estate" },
@@ -29,114 +54,126 @@ const assetTypes = [
 
 const currencies = [{ title: "USD", value: "USD" }];
 
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const today = new Date(new Date().setHours(0, 0, 0, 0)); // Today at 00:00:00
+
+// Define the Zod schema for validation
+const assetFormSchema = z
+  .object({
+    assetType: z.string().min(1, "Please select an asset type."),
+    title: z.string().min(3, "Title must be at least 3 characters."),
+    description: z
+      .string()
+      .min(10, "Description must be at least 10 characters."),
+    symbol: z
+      .string()
+      .min(3, "Symbol must be 3-10 characters.")
+      .max(10, "Symbol must be 3-10 characters.")
+      .regex(/^[A-Z0-9]+$/, "Symbol must be uppercase letters and numbers.")
+      .toUpperCase(),
+    yieldRate: z
+      .number({
+        required_error: "Yield rate is required.",
+        invalid_type_error: "Must be a number.",
+      })
+      .positive("Yield must be a positive percentage."),
+    durationDays: z
+      .number({
+        required_error: "Duration is required.",
+        invalid_type_error: "Must be a number.",
+      })
+      .int()
+      .positive("Duration must be a positive number of days."),
+    totalTarget: z
+      .number({
+        required_error: "Total target is required.",
+        invalid_type_error: "Must be a number.",
+      })
+      .positive("Total target must be a positive amount."),
+    minInvestment: z
+      .number({
+        required_error: "Min. investment is required.",
+        invalid_type_error: "Must be a number.",
+      })
+      .positive("Min. investment must be a positive amount."),
+    maxInvestment: z
+      .number({
+        required_error: "Max. investment is required.",
+        invalid_type_error: "Must be a number.",
+      })
+      .positive("Max. investment must be a positive amount."),
+    expiryDate: z.coerce
+      .date({
+        required_error: "Expiry date is required.",
+        invalid_type_error: "Invalid date.",
+      })
+      .min(today, { message: "Expiry date must be today or in the future." }),
+    proofFile: z
+      .instanceof(File, { message: "A proof document is required." })
+      .refine(
+        (file) => file.size <= MAX_FILE_SIZE,
+        `File size must be 50MB or less.`
+      ),
+  })
+  .refine((data) => data.maxInvestment >= data.minInvestment, {
+    message:
+      "Max. investment must be greater than or equal to min. investment.",
+    path: ["maxInvestment"], // Point error to this field
+  })
+  .refine((data) => data.totalTarget >= data.maxInvestment, {
+    message: "Total target must be greater than or equal to max. investment.",
+    path: ["totalTarget"],
+  });
+
+type AssetFormData = z.infer<typeof assetFormSchema>;
+
 export default function NewListingPage() {
   const router = useRouter();
-
-  const [assetType, setAssetType] = useState("invoice");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [symbol, setSymbol] = useState("");
-  const [yieldRate, setYieldRate] = useState("");
-  const [durationDays, setDurationDays] = useState("");
-  const [totalTarget, setTotalTarget] = useState("");
-  const [minInvestment, setMinInvestment] = useState("");
-  const [maxInvestment, setMaxInvestment] = useState("");
-  const [expiryDate, setExpiryDate] = useState("");
-  const [corporateId, setCorporateId] = useState("");
-  const [proofFile, setProofFile] = useState<File | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
 
-  // Handle file selection
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 50 * 1024 * 1024) {
-        // 50 MB limit
-        toast.error("File size exceeds 50 MB limit.");
-        setProofFile(null);
-        event.target.value = "";
-        return;
-      }
-      setProofFile(file);
-      toast.success(`${file.name} selected.`);
-    } else {
-      setProofFile(null);
-    }
-  };
+  const form = useForm<AssetFormData>({
+    resolver: zodResolver(assetFormSchema),
+    defaultValues: {
+      assetType: "invoice",
+      title: "",
+      description: "",
+      symbol: "",
+      yieldRate: undefined,
+      durationDays: undefined,
+      totalTarget: undefined,
+      minInvestment: undefined,
+      maxInvestment: undefined,
+      expiryDate: undefined,
+      proofFile: undefined,
+    },
+  });
 
-  const formatExpiryDate = () => {
-    if (!expiryDate) return "";
-    try {
-      const date = new Date(expiryDate);
-      return date.toISOString();
-    } catch (e) {
-      console.error("Invalid date format:", expiryDate);
-      return "";
-    }
-  };
-
-  const handlePublish = async () => {
-    if (
-      !assetType ||
-      !title ||
-      !symbol ||
-      !description ||
-      !yieldRate ||
-      !durationDays ||
-      !totalTarget ||
-      !minInvestment ||
-      !maxInvestment ||
-      !expiryDate ||
-      !proofFile
-    ) {
-      toast.error("Please fill all required fields and upload proof document.");
-      return;
-    }
-
-    const numericFields = {
-      yieldRate,
-      durationDays,
-      totalTarget,
-      minInvestment,
-      maxInvestment,
-    };
-    for (const [key, value] of Object.entries(numericFields)) {
-      if (isNaN(Number(value))) {
-        toast.error(`Invalid number entered for ${key}.`);
-        return;
-      }
-    }
-
-    const formattedExpiry = formatExpiryDate();
-    if (!formattedExpiry) {
-      toast.error("Invalid expiry date format.");
-      return;
-    }
-
+  const onSubmit = async (data: AssetFormData) => {
     setIsPublishing(true);
     const loadingToastId = toast.loading("Creating listing...");
 
     try {
       const formData = new FormData();
-      formData.append("assetType", assetType);
-      formData.append("title", title);
-      formData.append("description", description);
-      formData.append("symbol", symbol.toUpperCase());
-      formData.append("amount", totalTarget);
-      formData.append("currency", "USD");
-      formData.append("yieldRate", yieldRate);
-      formData.append("durationDays", durationDays);
-      formData.append("totalTarget", totalTarget);
-      formData.append("minInvestment", minInvestment);
-      formData.append("maxInvestment", maxInvestment);
-      formData.append("expiryDate", formattedExpiry);
-      formData.append("corporateId", "68f6f0f85a2f445265e64cc0");
-      formData.append("files", proofFile);
+      formData.append("assetType", data.assetType);
+      formData.append("title", data.title);
+      formData.append("description", data.description);
+      formData.append("symbol", data.symbol.toUpperCase());
+      formData.append("amount", String(data.totalTarget));
+      formData.append("currency", "USD"); // Hardcoded as before
+      formData.append("yieldRate", String(data.yieldRate / 100)); // Convert percentage to decimal
+      formData.append("durationDays", String(data.durationDays));
+      formData.append("totalTarget", String(data.totalTarget));
+      formData.append("minInvestment", String(data.minInvestment));
+      formData.append("maxInvestment", String(data.maxInvestment));
+      formData.append("expiryDate", data.expiryDate.toISOString());
+      formData.append("corporateId", "68f6f0f85a2f445265e64cc0"); // Hardcoded as before
+      formData.append("files", data.proofFile);
 
       const response = await apiClient.post("/asset", formData);
 
       toast.success("Listing created successfully!", { id: loadingToastId });
       router.push("/listing");
+      form.reset();
     } catch (error: any) {
       console.error("Listing creation failed:", error);
       toast.error(
@@ -152,272 +189,453 @@ export default function NewListingPage() {
     <div className="mt-10 w-full max-w-6xl m-auto space-y-8 pb-20">
       <BackButton />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 bg-black p-5 rounded-lg border border-border">
-        {/* Left Column: Proof Uploader */}
-        <div className="md:col-span-1 space-y-4">
-          <Label className="flex items-center gap-1.5" htmlFor="proof-upload">
-            Supporting Document{" "}
-            <Info className="w-3.5 h-3.5 text-muted-foreground" />
-          </Label>
-          <div
-            className={`relative flex flex-col items-center justify-center w-full min-h-[20rem] h-auto rounded-lg border-2 border-dashed border-border bg-muted/20 text-center p-6 cursor-pointer hover:border-primary transition-colors ${
-              proofFile ? "border-primary bg-primary/10" : ""
-            }`}
-            onClick={() => document.getElementById("proof-upload")?.click()}
-          >
-            <input
-              type="file"
-              id="proof-upload"
-              className="hidden"
-              onChange={handleFileChange}
-              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.svg"
-              disabled={isPublishing}
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 bg-black p-5 rounded-lg border border-border"
+        >
+          {/* Left Column: Proof Uploader */}
+          <div className="md:col-span-1 space-y-4">
+            <FormField
+              control={form.control}
+              name="proofFile"
+              render={({ field: { onChange, onBlur, name, ref } }) => (
+                <FormItem>
+                  <FormLabel
+                    htmlFor="proof-upload"
+                    className="flex items-center gap-1.5 cursor-pointer"
+                  >
+                    Supporting Document{" "}
+                    <Info className="w-3.5 h-3.5 text-muted-foreground" />
+                  </FormLabel>
+                  <FormControl>
+                    <div
+                      className={cn(
+                        "relative flex flex-col items-center justify-center w-full min-h-[20rem] h-auto rounded-lg border-2 border-dashed border-border bg-muted/20 text-center p-6 cursor-pointer hover:border-primary transition-colors",
+                        form.watch("proofFile") &&
+                          !form.formState.errors.proofFile &&
+                          "border-primary bg-primary/10",
+                        form.formState.errors.proofFile && "border-destructive"
+                      )}
+                      onClick={() =>
+                        document.getElementById("proof-upload")?.click()
+                      }
+                    >
+                      <input
+                        type="file"
+                        id="proof-upload"
+                        className="hidden"
+                        onBlur={onBlur}
+                        name={name}
+                        ref={ref}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            if (file.size > MAX_FILE_SIZE) {
+                              form.setError("proofFile", {
+                                type: "manual",
+                                message: "File size exceeds 50 MB limit.",
+                              });
+                              e.target.value = "";
+                            } else {
+                              onChange(file); // Set file in react-hook-form
+                              form.clearErrors("proofFile");
+                              toast.success(`${file.name} selected.`);
+                            }
+                          } else {
+                            onChange(undefined); // Handle file removal
+                          }
+                        }}
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.svg"
+                        disabled={isPublishing}
+                      />
+                      {form.watch("proofFile") &&
+                      !form.formState.errors.proofFile ? (
+                        <>
+                          <CheckCircle2 className="w-12 h-12 text-primary mb-4" />
+                          <p className="text-foreground font-semibold">
+                            File Selected:
+                          </p>
+                          <p className="text-sm text-muted-foreground break-all">
+                            {form.watch("proofFile")?.name}
+                          </p>
+                          <p className="mt-4 text-xs text-primary underline">
+                            Click to change file
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-10 h-10 text-muted-foreground mb-4" />
+                          <p className="text-foreground mb-1">
+                            <span className="font-semibold text-primary">
+                              Click to upload
+                            </span>{" "}
+                            or drag and drop
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Proof of Ownership, Invoice, etc. (max 50 MB)
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </FormControl>
+                  <FormMessage className="text-center" />
+                </FormItem>
+              )}
             />
-            {proofFile ? (
-              <>
-                <CheckCircle2 className="w-12 h-12 text-primary mb-4" />
-                <p className="text-foreground font-semibold">File Selected:</p>
-                <p className="text-sm text-muted-foreground break-all">
-                  {proofFile.name}
-                </p>
-                <p className="mt-4 text-xs text-primary underline">
-                  Click to change file
-                </p>
-              </>
-            ) : (
-              <>
-                <Upload className="w-10 h-10 text-muted-foreground mb-4" />
-                <p className="text-foreground mb-1">
-                  <span className="font-semibold text-primary">
-                    Click to upload
-                  </span>{" "}
-                  or drag and drop
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Proof of Ownership, Invoice, etc. (max 50 MB)
-                </p>
-              </>
-            )}
           </div>
-        </div>
 
-        {/* Right Column: Form */}
-        <div className="md:col-span-2 space-y-8">
-          <div>
-            <div className="p-3 bg-muted/30 rounded-full w-12 h-12 flex items-center justify-center mb-4">
-              <HardDrive className="w-6 h-6 text-primary" />
+          {/* Right Column: Form */}
+          <div className="md:col-span-2 space-y-8">
+            <div>
+              <div className="p-3 bg-muted/30 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                <HardDrive className="w-6 h-6 text-primary" />
+              </div>
+              <h1 className="text-3xl font-semibold mb-2">
+                List your Real World Asset
+              </h1>
+              <p className="text-muted-foreground max-w-lg">
+                Provide the details for your asset and upload supporting
+                documents. This will create an investment pool.
+              </p>
             </div>
-            <h1 className="text-3xl font-semibold mb-2">
-              List your Real World Asset
-            </h1>
-            <p className="text-muted-foreground max-w-lg">
-              Provide the details for your asset and upload supporting
-              documents. This will create an investment pool.
-            </p>
-          </div>
 
-          <div className="space-y-6">
-            {/* Asset Type */}
-            <div className="space-y-2">
-              <Label htmlFor="assetType">Asset Type</Label>
-              <Select
-                value={assetType}
-                onValueChange={setAssetType}
+            <div className="space-y-6">
+              {/* Asset Type */}
+              <FormField
+                control={form.control}
+                name="assetType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Asset Type</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      disabled={isPublishing}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="h-11 bg-muted/20 border-border w-full">
+                          <SelectValue placeholder="Select asset type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {assetTypes.map((cat) => (
+                          <SelectItem key={cat.type} value={cat.type}>
+                            {cat.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Title */}
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Title</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., Office Equipment Purchase Invoice #123"
+                        className="h-11 bg-muted/20 border-border"
+                        disabled={isPublishing}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      A descriptive title for this asset listing.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Description */}
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Provide details about the asset or invoice..."
+                        className="bg-muted/20 border-border min-h-[80px]"
+                        disabled={isPublishing}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Token Symbol */}
+              <FormField
+                control={form.control}
+                name="symbol"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Token Symbol</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., INV123"
+                        maxLength={10}
+                        className="h-11 bg-muted/20 border-border uppercase"
+                        disabled={isPublishing}
+                        {...field}
+                        onChange={(e) =>
+                          field.onChange(e.target.value.toUpperCase())
+                        }
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Unique ticker for the pool token (3-10 chars, A-Z, 0-9).
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Yield Rate & Duration */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="yieldRate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Yield Rate (APY %)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="e.g., 12.5"
+                          className="h-11 bg-muted/20 border-border"
+                          disabled={isPublishing}
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(
+                              e.target.value === ""
+                                ? undefined
+                                : e.target.valueAsNumber
+                            )
+                          }
+                          onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Annual yield. Enter 12.5 for 12.5%.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="durationDays"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Duration (Days)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="1"
+                          placeholder="e.g., 90"
+                          className="h-11 bg-muted/20 border-border"
+                          disabled={isPublishing}
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(
+                              e.target.value === ""
+                                ? undefined
+                                : e.target.valueAsNumber
+                            )
+                          }
+                          onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Investment lock-up period.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Total Target */}
+              <FormField
+                control={form.control}
+                name="totalTarget"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Total Funding Target (USD)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="e.g., 25000"
+                        className="h-11 bg-muted/20 border-border"
+                        disabled={isPublishing}
+                        {...field}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value === ""
+                              ? undefined
+                              : e.target.valueAsNumber
+                          )
+                        }
+                        onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Total capital to be raised.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Min & Max Investment */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="minInvestment"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Min Investment (USD)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="e.g., 100"
+                          className="h-11 bg-muted/20 border-border"
+                          disabled={isPublishing}
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(
+                              e.target.value === ""
+                                ? undefined
+                                : e.target.valueAsNumber
+                            )
+                          }
+                          onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="maxInvestment"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Max Investment (USD)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="e.g., 5000"
+                          className="h-11 bg-muted/20 border-border"
+                          disabled={isPublishing}
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(
+                              e.target.value === ""
+                                ? undefined
+                                : e.target.valueAsNumber
+                            )
+                          }
+                          onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="expiryDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Funding Expiry Date</FormLabel>
+                    <FormControl>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "h-11 w-full justify-start text-left font-normal bg-muted/20 border-border",
+                              !field.value && "text-muted-foreground"
+                            )}
+                            disabled={isPublishing}
+                          >
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date < new Date(new Date().setHours(0, 0, 0, 0))
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </FormControl>
+                    <FormDescription>
+                      Date when the funding period for this pool ends.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-4 pt-4">
+              <Button
+                type="button"
+                variant="ghost"
+                size="lg"
+                onClick={() => router.back()}
+                className="text-muted-foreground"
                 disabled={isPublishing}
               >
-                <SelectTrigger className="h-11 bg-muted/20 border-border w-full">
-                  <SelectValue placeholder="Select asset type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {assetTypes.map((cat) => (
-                    <SelectItem key={cat.type} value={cat.type}>
-                      {cat.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Title */}
-            <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g., Office Equipment Purchase Invoice #123"
-                className="h-11 bg-muted/20 border-border"
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="lg"
+                loading={isPublishing}
                 disabled={isPublishing}
-              />
-              <p className="text-xs text-muted-foreground">
-                A descriptive title for this asset listing.
-              </p>
-            </div>
-
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e: any) => setDescription(e.target.value)}
-                placeholder="Provide details about the asset or invoice..."
-                className="bg-muted/20 border-border min-h-[80px]"
-                disabled={isPublishing}
-              />
-            </div>
-
-            {/* Token Symbol */}
-            <div className="space-y-2">
-              <Label htmlFor="symbol">Token Symbol</Label>
-              <Input
-                id="symbol"
-                value={symbol}
-                onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                placeholder="e.g., INV123"
-                maxLength={10}
-                className="h-11 bg-muted/20 border-border uppercase"
-                disabled={isPublishing}
-              />
-              <p className="text-xs text-muted-foreground">
-                A short, unique ticker for the investment pool token (3-10
-                chars). Cannot be changed later.
-              </p>
-            </div>
-
-            {/* Yield Rate & Duration */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="yieldRate">Yield Rate (APY %)</Label>
-                <Input
-                  id="yieldRate"
-                  type="number"
-                  step="0.01"
-                  value={(parseFloat(yieldRate) * 100).toFixed(2)}
-                  onChange={(e) => {
-                    const percentageValue = parseFloat(e.target.value);
-                    if (!isNaN(percentageValue)) {
-                      setYieldRate((percentageValue / 100).toString());
-                    } else {
-                      setYieldRate("");
-                    }
-                  }}
-                  placeholder="e.g., 12.00"
-                  className="h-11 bg-muted/20 border-border"
-                  disabled={isPublishing}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Annual Percentage Yield offered to investors. Enter as
-                  percentage (e.g., 12 for 12%).
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="durationDays">Duration (Days)</Label>
-                <Input
-                  id="durationDays"
-                  type="number"
-                  value={durationDays}
-                  onChange={(e) => setDurationDays(e.target.value)}
-                  placeholder="e.g., 90"
-                  className="h-11 bg-muted/20 border-border"
-                  disabled={isPublishing}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Investment lock-up period in days.
-                </p>
-              </div>
-            </div>
-
-            {/* Total Target */}
-            <div className="space-y-2">
-              <Label htmlFor="totalTarget">Total Funding Target</Label>
-              <Input
-                id="totalTarget"
-                type="number"
-                value={totalTarget}
-                onChange={(e) => setTotalTarget(e.target.value)}
-                placeholder="e.g., 25000"
-                className="h-11 bg-muted/20 border-border"
-                disabled={isPublishing}
-              />
-              <p className="text-xs text-muted-foreground">
-                The total amount of capital to be raised for this pool (in USD).
-              </p>
-            </div>
-
-            {/* Min & Max Investment */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="minInvestment">Min Investment (USD)</Label>
-                <Input
-                  id="minInvestment"
-                  type="number"
-                  value={minInvestment}
-                  onChange={(e) => setMinInvestment(e.target.value)}
-                  placeholder="e.g., 100"
-                  className="h-11 bg-muted/20 border-border"
-                  disabled={isPublishing}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Minimum amount an investor can put in.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="maxInvestment">Max Investment (USD)</Label>
-                <Input
-                  id="maxInvestment"
-                  type="number"
-                  value={maxInvestment}
-                  onChange={(e) => setMaxInvestment(e.target.value)}
-                  placeholder="e.g., 5000"
-                  className="h-11 bg-muted/20 border-border"
-                  disabled={isPublishing}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Maximum amount an investor can put in.
-                </p>
-              </div>
-            </div>
-
-            {/* Expiry Date */}
-            <div className="space-y-2">
-              <Label htmlFor="expiryDate">Funding Expiry Date</Label>
-              <Input
-                id="expiryDate"
-                type="date"
-                value={expiryDate}
-                onChange={(e) => setExpiryDate(e.target.value)}
-                className="h-11 bg-muted/20 border-border"
-                disabled={isPublishing}
-              />
-              <p className="text-xs text-muted-foreground">
-                Date when the funding period for this pool ends.
-              </p>
+              >
+                {isPublishing ? "Creating..." : "Create Listing"}
+              </Button>
             </div>
           </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-4 pt-4">
-            <Button
-              variant="ghost"
-              size="lg"
-              onClick={() => router.back()}
-              className="text-muted-foreground"
-              disabled={isPublishing}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="lg"
-              onClick={handlePublish}
-              loading={isPublishing}
-              disabled={isPublishing}
-            >
-              {isPublishing ? "Creating..." : "Create Listing"}
-            </Button>
-          </div>
-        </div>
-      </div>
+        </form>
+      </Form>
     </div>
   );
 }

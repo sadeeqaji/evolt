@@ -3,23 +3,30 @@ import { useHWBridge } from "@evolt/components/common/HWBridgeClientProvider";
 import { Button } from "@evolt/components/ui/button";
 import { useTokenSwap } from "@evolt/hooks/useTokenSwap";
 import { useRouter } from "next/navigation";
+import { DepositSuccessModal } from "../DepositSuccessModal";
+import { toast } from "sonner";
 
 interface DepositSummaryCardProps {
   depositAmount: string;
   vusdAmount: string;
   onProceedToCheckout: () => void;
+  onDepositAmountChange: (value: string) => void;
 }
 
 export const DepositSummaryCard = ({
   depositAmount,
   vusdAmount,
   onProceedToCheckout,
+  onDepositAmountChange,
 }: DepositSummaryCardProps) => {
   const hasAmount = depositAmount && parseFloat(depositAmount) > 0;
   const { accountId } = useHWBridge();
   const { swap } = useTokenSwap();
   const [loading, setLoading] = useState(false);
   const { push } = useRouter();
+
+  const [depositSuccess, setDepositSuccess] = useState(false);
+
   const handleSwap = async () => {
     if (!accountId) {
       console.error("No Hedera account connected.");
@@ -34,14 +41,18 @@ export const DepositSummaryCard = ({
 
     setLoading(true);
     try {
-      await swap({
+      const ok = await swap({
         treasuryAccountId: "0.0.6968947",
         userAccountId: accountId,
         usdcTokenId: process.env.NEXT_PUBLIC_HEDERA_USDC_TOKEN_ID!,
         amount,
       });
 
-      push("/");
+      if (ok) {
+        setDepositSuccess(true);
+      } else {
+        toast.error("Swap failed");
+      }
     } catch (error) {
       console.error("Swap failed:", error);
     } finally {
@@ -49,50 +60,71 @@ export const DepositSummaryCard = ({
     }
   };
 
+  const handleContinue = () => {
+    setDepositSuccess(false);
+    onDepositAmountChange("");
+  };
+
+  const handleViewAssets = () => {
+    setDepositSuccess(false);
+    onDepositAmountChange("");
+  };
+
   return (
-    <div className="bg-black border border-swap-border rounded-3xl p-6 space-y-4">
-      {hasAmount ? (
-        <div className="bg-input-bg/50 border border-input-border rounded-xl p-4 space-y-3">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Exchange Rate</span>
-            <span className="text-foreground">1 USDC = 1 VUSD</span>
+    <>
+      <div className="bg-black border border-swap-border rounded-3xl p-6 space-y-4">
+        {hasAmount ? (
+          <div className="bg-input-bg/50 border border-input-border rounded-xl p-4 space-y-3">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Exchange Rate</span>
+              <span className="text-foreground">1 USDC = 1 VUSD</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">
+                Processing Fee (0.9%)
+              </span>
+              <span className="text-foreground">
+                {(parseFloat(depositAmount) * 0.009).toFixed(2)} USDC
+              </span>
+            </div>
+            <div className="border-t border-input-border pt-3 mt-2 flex justify-between text-base font-medium">
+              <span className="text-foreground">Total VUSD</span>
+              <span className="text-accent text-lg">{vusdAmount} VUSD</span>
+            </div>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Processing Fee (0.9%)</span>
-            <span className="text-foreground">
-              {(parseFloat(depositAmount) * 0.009).toFixed(2)} USDC
-            </span>
+        ) : (
+          <div className="bg-input-bg/50 border border-input-border rounded-xl p-8 text-center">
+            <p className="text-muted-foreground">
+              Enter an amount to see transaction details
+            </p>
           </div>
-          <div className="border-t border-input-border pt-3 mt-2 flex justify-between text-base font-medium">
-            <span className="text-foreground">Total VUSD</span>
-            <span className="text-accent text-lg">{vusdAmount} VUSD</span>
-          </div>
-        </div>
-      ) : (
-        <div className="bg-input-bg/50 border border-input-border rounded-xl p-8 text-center">
-          <p className="text-muted-foreground">
-            Enter an amount to see transaction details
-          </p>
-        </div>
-      )}
+        )}
 
-      {/* Swap & Proceed Button */}
-      <Button
-        onClick={handleSwap}
-        className="w-full text-accent-foreground font-semibold py-6 rounded-2xl text-lg"
-        disabled={!hasAmount || loading}
-        loading={loading}
-      >
-        {loading ? "Processing..." : "Deposit "}
-      </Button>
+        <Button
+          onClick={handleSwap}
+          className="w-full text-accent-foreground font-semibold py-6 rounded-2xl text-lg"
+          disabled={!hasAmount || loading}
+          loading={loading}
+        >
+          {loading ? "Processing..." : "Deposit "}
+        </Button>
 
-      {/* Info Message */}
-      {hasAmount && (
-        <p className="text-xs text-center text-yellow-400">
-          {`This is a Testnet environment. USDC deposits are disabled — you'll receive
+        {hasAmount && (
+          <p className="text-xs text-center text-yellow-400">
+            {`This is a Testnet environment. USDC deposits are disabled — you'll receive
     1000 VUSD automatically for testing purposes.`}
-        </p>
+          </p>
+        )}
+      </div>
+
+      {depositSuccess && (
+        <DepositSuccessModal
+          open={depositSuccess}
+          amount={parseFloat(vusdAmount || "0")}
+          onContinue={handleContinue}
+          onViewPortfolio={handleViewAssets}
+        />
       )}
-    </div>
+    </>
   );
 };

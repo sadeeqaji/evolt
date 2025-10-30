@@ -13,7 +13,7 @@ import {
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>;
-  // Add any custom actions here
+
   actions: {
     label: string;
     onClick: (row: Row<TData>) => void;
