@@ -47,10 +47,8 @@ const assetTypes = [
 
 const currencies = [{ title: "USD", value: "USD" }];
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-const today = new Date(new Date().setHours(0, 0, 0, 0)); // Today at 00:00:00
-
-// Define the Zod schema for validation
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
+const today = new Date(new Date().setHours(0, 0, 0, 0));
 
 const assetFormSchema = z
   .object({
@@ -70,7 +68,6 @@ const assetFormSchema = z
       })
       .transform((val) => val.toUpperCase()),
 
-    // Coerce number from string input and validate
     yieldRate: z.coerce
       .number()
       .positive({ message: "Yield must be a positive percentage." })
