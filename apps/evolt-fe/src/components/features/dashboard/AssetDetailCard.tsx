@@ -68,6 +68,7 @@ export const InvoiceCard = ({
   verificationDate,
   blockchainExplorerUrl,
 }: InvoiceCardProps) => {
+  console.log({ d: blockchainExplorerUrl });
   return (
     <div className="w-full mx-auto bg-black p-5 rounded-2xl shadow-2xl">
       {/* Header */}
