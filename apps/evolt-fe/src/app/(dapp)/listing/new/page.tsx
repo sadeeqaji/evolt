@@ -47,71 +47,71 @@ const assetTypes = [
 
 const currencies = [{ title: "USD", value: "USD" }];
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-const today = new Date(new Date().setHours(0, 0, 0, 0)); // Today at 00:00:00
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
+const today = new Date(new Date().setHours(0, 0, 0, 0));
 
-// Define the Zod schema for validation
 const assetFormSchema = z
   .object({
-    assetType: z.string().min(1, "Please select an asset type."),
-    title: z.string().min(3, "Title must be at least 3 characters."),
+    assetType: z.string().min(1, { message: "Please select an asset type." }),
+    title: z
+      .string()
+      .min(3, { message: "Title must be at least 3 characters." }),
     description: z
       .string()
-      .min(10, "Description must be at least 10 characters."),
+      .min(10, { message: "Description must be at least 10 characters." }),
     symbol: z
       .string()
-      .min(3, "Symbol must be 3-10 characters.")
-      .max(10, "Symbol must be 3-10 characters.")
-      .regex(/^[A-Z0-9]+$/, "Symbol must be uppercase letters and numbers.")
-      .toUpperCase(),
-    yieldRate: z
-      .number({
-        required_error: "Yield rate is required.",
-        invalid_type_error: "Must be a number.",
+      .min(3, { message: "Symbol must be 3-10 characters." })
+      .max(10, { message: "Symbol must be 3-10 characters." })
+      .regex(/^[A-Z0-9]+$/, {
+        message: "Symbol must be uppercase letters and numbers.",
       })
-      .positive("Yield must be a positive percentage."),
-    durationDays: z
-      .number({
-        required_error: "Duration is required.",
-        invalid_type_error: "Must be a number.",
-      })
-      .int()
-      .positive("Duration must be a positive number of days."),
-    totalTarget: z
-      .number({
-        required_error: "Total target is required.",
-        invalid_type_error: "Must be a number.",
-      })
-      .positive("Total target must be a positive amount."),
-    minInvestment: z
-      .number({
-        required_error: "Min. investment is required.",
-        invalid_type_error: "Must be a number.",
-      })
-      .positive("Min. investment must be a positive amount."),
-    maxInvestment: z
-      .number({
-        required_error: "Max. investment is required.",
-        invalid_type_error: "Must be a number.",
-      })
-      .positive("Max. investment must be a positive amount."),
-    expiryDate: z.coerce
-      .date({
-        required_error: "Expiry date is required.",
-        invalid_type_error: "Invalid date.",
-      })
-      .min(today, { message: "Expiry date must be today or in the future." }),
+      .transform((val) => val.toUpperCase()),
+
+    yieldRate: z.coerce
+      .number()
+      .positive({ message: "Yield must be a positive percentage." })
+      .refine((val) => !isNaN(val), { message: "Yield rate is required." }),
+
+    durationDays: z.coerce
+      .number()
+      .int({ message: "Duration must be an integer." })
+      .positive({ message: "Duration must be a positive number of days." })
+      .refine((val) => !isNaN(val), { message: "Duration is required." }),
+
+    totalTarget: z.coerce
+      .number()
+      .positive({ message: "Total target must be a positive amount." })
+      .refine((val) => !isNaN(val), { message: "Total target is required." }),
+
+    minInvestment: z.coerce
+      .number()
+      .positive({ message: "Min. investment must be a positive amount." })
+      .refine((val) => !isNaN(val), {
+        message: "Min. investment is required.",
+      }),
+
+    maxInvestment: z.coerce
+      .number()
+      .positive({ message: "Max. investment must be a positive amount." })
+      .refine((val) => !isNaN(val), {
+        message: "Max. investment is required.",
+      }),
+
+    expiryDate: z.coerce.date().refine((val) => val >= today, {
+      message: "Expiry date must be today or in the future.",
+    }),
+
     proofFile: z
       .instanceof(File, { message: "A proof document is required." })
-      .refine(
-        (file) => file.size <= MAX_FILE_SIZE,
-        `File size must be 50MB or less.`
-      ),
+      .refine((file) => file.size <= MAX_FILE_SIZE, {
+        message: "File size must be 50MB or less.",
+      }),
   })
   .refine((data) => data.maxInvestment >= data.minInvestment, {
     message:
       "Max. investment must be greater than or equal to min. investment.",
-    path: ["maxInvestment"], // Point error to this field
+    path: ["maxInvestment"],
   })
   .refine((data) => data.totalTarget >= data.maxInvestment, {
     message: "Total target must be greater than or equal to max. investment.",
