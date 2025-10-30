@@ -163,7 +163,7 @@ export const createWalletTool = () => {
   );
 };
 
-export const createAssociateTokenTool = (_app: FastifyInstance) => {
+export const createAssociateTokenTool = () => {
   const schema = z.object({
     phoneNumber: z.string().describe("User phone in E.164 or raw WhatsApp format"),
     tokenId: z.string().describe("HTS token ID (e.g., 0.0.123456)"),
@@ -235,7 +235,7 @@ export const createPreviewEarningsTool = () => {
 export const createJoinPoolTool = (app: FastifyInstance) => {
   const schema = z.object({
     phoneNumber: z.string(),
-    assetId: z.string(), // user may send "1" or a title like "Cow Bell Our Milk"
+    assetId: z.string(),
     amount: z.number().positive(),
   });
 
@@ -343,7 +343,7 @@ export const createJoinPoolTool = (app: FastifyInstance) => {
       name: "join_pool",
       description:
         "Invests in a pool. Resolves the user's selection to a valid Asset _id from Redis before moving funds.",
-      schema,
+      schema: schema as any,
     }
   );
 };

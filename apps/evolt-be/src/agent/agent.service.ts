@@ -61,7 +61,7 @@ export class AgentService {
       createGetRwaAssetsTool(this.app),
       createGetPortfolioTool(),
       createConnectWalletTool(this.app),
-      createAssociateTokenTool(this.app),
+      createAssociateTokenTool(),
       createPreviewEarningsTool(),
       createJoinPoolTool(this.app),
       createFundWalletTool(this.app),
