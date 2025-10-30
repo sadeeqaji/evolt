@@ -1,6 +1,6 @@
 # Evolt: Fractionalized RWA on Hedera for the World 🌐
 
-> **Evolt** is a **blockchain-powered investment platform** dedicated to democratizing access to **Real World Assets (RWA)**. We enable users to own fractionalized shares of assets including **real estate, creator IP, agriculture, and private credit** directly via **WhatsApp** or a dedicated web dApp.
+> **Evolt** is a **blockchain powered investment platform** dedicated to democratizing access to **Real World Assets (RWA)**. We enable users to own fractionalized shares of assets including **real estate, creator IP, agriculture, and private credit** directly via **WhatsApp** or a dedicated web dApp.
 >
 > **Built for the Hedera Hackathon**, this monorepo consolidates our core applications:
 >
@@ -43,7 +43,7 @@ Evolt is built on a modern, high-performance stack, with **Hedera Hashgraph** at
 
 ## 💡 Evolt Architecture: Hedera Flow
 
-The Evolt platform leverages a hybrid architecture to combine the speed and trust of the Hedera network with the flexibility of a traditional API, supporting both programmatic (API) and direct-wallet (dApp) interactions.
+The Evolt platform leverages a hybrid architecture to combine the speed and trust of the Hedera network with the flexibility of a traditional API, supporting both programmatic (API) and direct wallet (dApp) interactions.
 
 ![Evolt Architecture Diagram](architecture_diagram.jpeg)
 
