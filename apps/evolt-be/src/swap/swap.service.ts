@@ -5,14 +5,11 @@ import {
     TransferTransaction,
     TransactionReceipt,
     AccountId,
-    PrivateKey,
-    AccountInfoQuery,
-    TokenAssociateTransaction,
-    AccountBalanceQuery
+    PrivateKey
 } from "@hashgraph/sdk";
 import { normalizeTxId } from "../util/util.hedera.js";
 import axios from "axios";
-import { getUserKey } from "@util/util.manage-key.js";
+import { getUserKey } from "../util/util.manage-key.js";
 
 const OPERATOR_ID = process.env.HEDERA_OPERATOR_ID!;
 const OPERATOR_KEY = process.env.HEDERA_OPERATOR_KEY!;
