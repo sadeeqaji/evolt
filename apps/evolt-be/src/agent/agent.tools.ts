@@ -352,6 +352,7 @@ export const createJoinPoolTool = (app: FastifyInstance) => {
 export const createFundWalletTool = (app: FastifyInstance) => {
   const paystack = new PaystackService(app);
 
+
   const schema = z.object({
     phoneNumber: z.string().describe("User phone number in E.164 format."),
     amount: z.number().positive().optional().describe("Amount to fund in USD."),
@@ -382,7 +383,8 @@ export const createFundWalletTool = (app: FastifyInstance) => {
       name: "fund_wallet",
       description:
         "Generates a secure Paystack payment link to fund the user's wallet. Called when user has a wallet but insufficient funds.",
-      schema,
+      schema: schema as any,
+
     }
   );
 };
