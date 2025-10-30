@@ -44,7 +44,9 @@ export class WhatsAppService {
                 `/${process.env.WHATSAPP_PHONE_ID}/messages`,
                 data
             );
+            console.log(data, 'data===')
         } catch (error) {
+            console.log(error, 'error')
             this.handleError(error);
         }
     }

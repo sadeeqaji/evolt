@@ -64,6 +64,7 @@ export class WhatsAppController {
       const username = contact?.profile?.name || 'there';
 
       const agentResponse = await this.agentService.handleMessage(from, text, username);
+      console.log(agentResponse, 'agentResponse')
       await this.sendWhatsAppMessage(from, agentResponse);
 
       return reply.code(200).send();

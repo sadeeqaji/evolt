@@ -166,7 +166,6 @@ async function getEscrowForToken(tokenIdOrEvm: string) {
     return { escrowEvm, tokenEvm };
 }
 
-/* ===== SERVICE ===== */
 class InvestmentService {
     async investFromDeposit(
         { accountId, investorId }: { accountId: string; investorId: string },
@@ -259,6 +258,110 @@ class InvestmentService {
                     tokenEvm,
                     escrowEvm,
                     assetType: asset.assetType,
+                    vusdAmount,
+                    iTokenAmount,
+                    yieldRate,
+                    expectedYield,
+                    depositTxId: normalizeTxId(txId),
+                    txId: tx2.hash,
+                    timestamp: new Date(),
+                })
+            )
+            .execute(hederaClient);
+
+        return { success: true, investment };
+    }
+
+    async investFromDepositDirect(
+        { accountId, investorId }: { accountId: string; investorId: string },
+        params: { assetId: string; txId: string; amount: number }
+    ) {
+        const { assetId, txId, amount } = params;
+
+        const asset = (await AssetModel.findById(assetId).lean()) as AssetDoc | null;
+        if (!asset) throw new Error("Asset not found");
+        if (!asset.tokenId || !asset.tokenEvm)
+            throw new Error("Asset not tokenized");
+        if (!asset.escrowEvm && !asset.escrowContractId)
+            throw new Error("Missing escrow reference");
+
+        const escrowEvm =
+            asset.escrowEvm || idToEvmAddress(String(asset.escrowContractId));
+        const tokenEvm = asset.tokenEvm;
+        const vusdAmount = Number(amount);
+
+        const min = Number(asset.minInvestment ?? 0);
+        const max = Number(asset.maxInvestment ?? 0);
+        if (min && vusdAmount < min)
+            throw new Error(`Below minimum (${min} vUSD)`);
+        if (max && vusdAmount > max)
+            throw new Error(`Above maximum (${max} vUSD)`);
+        if (vusdAmount % FRACTION_SIZE !== 0)
+            throw new Error(`Amount must be multiple of ${FRACTION_SIZE} vUSD`);
+
+        const agg = await InvestmentModel.aggregate([
+            { $match: { tokenId: asset.tokenId } },
+            { $group: { _id: null, funded: { $sum: "$vusdAmount" } } },
+        ]);
+        const funded = Number(agg[0]?.funded ?? 0);
+        const totalTarget = Number(asset.totalTarget ?? 0);
+        if (totalTarget && funded + vusdAmount > totalTarget)
+            throw new Error("Pool target exceeded");
+
+        const escrow = await getEscrowContract(escrowEvm);
+        await ensureOwner(escrow);
+        await tryAssociateToken(escrow, tokenEvm);
+
+        const vusdUnits = Math.floor(vusdAmount * 10 ** VUSD_DECIMALS);
+        const iTokenAmount = Math.floor(vusdAmount / FRACTION_SIZE);
+        if (iTokenAmount <= 0)
+            throw new Error("Calculated iTokenAmount=0");
+
+        const investorEvm = normalizeAccountIdOrAddr(accountId);
+
+        const tx1 = await escrow.releaseIToken(investorEvm, tokenEvm, iTokenAmount);
+        await tx1.wait();
+
+        const tx2 = await escrow.recordInvestment(
+            investorEvm,
+            tokenEvm,
+            BigInt(vusdUnits)
+        );
+        await tx2.wait();
+
+        const yieldRate = Number(asset.yieldRate ?? 0.1);
+        const expectedYield = vusdAmount * yieldRate;
+        const maturedAt = new Date(
+            Date.now() + (asset.durationDays ?? 90) * 86400000
+        );
+
+        const investment = await InvestmentModel.create({
+            investorId,
+            investorEvm,
+            assetId,
+            tokenId: asset.tokenId,
+            tokenEvm,
+            assetType: asset.assetType,
+            assetRef: asset._id,
+            vusdAmount,
+            iTokenAmount,
+            yieldRate,
+            expectedYield,
+            contractIndex: 0,
+            txId: tx2.hash,
+            depositTxId: normalizeTxId(txId),
+            maturedAt,
+        });
+
+        await new TopicMessageSubmitTransaction()
+            .setTopicId(HCS_TOPIC_ID)
+            .setMessage(
+                JSON.stringify({
+                    event: "INVESTMENT_RECORDED",
+                    investorId,
+                    tokenId: asset.tokenId,
+                    tokenEvm,
+                    escrowEvm,
                     vusdAmount,
                     iTokenAmount,
                     yieldRate,
