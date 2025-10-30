@@ -8,8 +8,8 @@ import { WalletService } from '../wallet/wallet.service.js';
 import { WalletService as WalletCreator } from '../wallet/wallet.service.js';
 import assetService from "../asset/asset.service.js";
 import investmentService from '../investment/investment.service.js';
-import PaystackService from 'payment/paystack.service.js';
-import swapService from '@swap/swap.service.js';
+import PaystackService from '../payment/paystack.service.js';
+import swapService from '../swap/swap.service.js';
 import mongoose from "mongoose";
 
 const isObjectId = (s: string) => mongoose.Types.ObjectId.isValid(s);
@@ -318,14 +318,8 @@ export const createJoinPoolTool = (app: FastifyInstance) => {
           { assetId: resolvedAssetId, txId, amount }
         );
 
-<<<<<<< HEAD
-        const inv = await investmentService.getInvestmentById<{
-          assetRef?: { title?: string; assetType?: string; tokenId?: string };
-        }>(String(result.investment._id), { populate: true, lean: true });
-=======
         const inv = await investmentService.getInvestmentById(String(result?.investment._id))
 
->>>>>>> 32112ad (fixed whatsapp agent service)
 
         const title =
           (inv as any)?.assetRef?.title ??

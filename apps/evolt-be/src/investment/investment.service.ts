@@ -384,18 +384,7 @@ class InvestmentService {
         return await InvestmentModel.find({ investorId }).sort({ createdAt: -1 }).lean();
     }
 
-<<<<<<< HEAD
 
-
-=======
-    /**
- * Fetch a single investment by _id.
- * @param id Mongo ObjectId string
- * @param options.populate Populate refs (default: true)
- * @param options.lean Return plain object instead of Mongoose doc (default: true)
- * @param options.select Space-separated projection (e.g. "vusdAmount expectedYield")
- */
->>>>>>> 32112ad (fixed whatsapp agent service)
     async getInvestmentById<T = any>(
         id: string,
         options: { populate?: boolean; lean?: boolean; select?: string } = {}
@@ -413,10 +402,6 @@ class InvestmentService {
         return doc;
     }
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 32112ad (fixed whatsapp agent service)
     async settleMaturedInvestments() {
         const matured = await InvestmentModel.find({
             status: "active",
