@@ -14,14 +14,7 @@ import {
 } from "@evolt/components/ui/select";
 import { format } from "date-fns";
 import { Textarea } from "@evolt/components/ui/textarea";
-import {
-  Upload,
-  Info,
-  HardDrive,
-  FileText,
-  CheckCircle2,
-  Calendar,
-} from "lucide-react";
+import { Upload, Info, HardDrive, CheckCircle2, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import apiClient from "@evolt/lib/apiClient";
 import { useForm } from "react-hook-form";
@@ -213,8 +206,8 @@ export default function NewListingPage() {
                       className={cn(
                         "relative flex flex-col items-center justify-center w-full min-h-[20rem] h-auto rounded-lg border-2 border-dashed border-border bg-muted/20 text-center p-6 cursor-pointer hover:border-primary transition-colors",
                         form.watch("proofFile") &&
-                        !form.formState.errors.proofFile &&
-                        "border-primary bg-primary/10",
+                          !form.formState.errors.proofFile &&
+                          "border-primary bg-primary/10",
                         form.formState.errors.proofFile && "border-destructive"
                       )}
                       onClick={() =>
@@ -250,7 +243,7 @@ export default function NewListingPage() {
                         disabled={isPublishing}
                       />
                       {form.watch("proofFile") &&
-                        !form.formState.errors.proofFile ? (
+                      !form.formState.errors.proofFile ? (
                         <>
                           <CheckCircle2 className="w-12 h-12 text-primary mb-4" />
                           <p className="text-foreground font-semibold">
