@@ -318,8 +318,9 @@ export const createJoinPoolTool = (app: FastifyInstance) => {
           { assetId: resolvedAssetId, txId, amount }
         );
 
-        const inv = await investmentService.getInvestmentById(String(result?.investment._id))
-
+        const inv = await investmentService.getInvestmentById<{
+          assetRef?: { title?: string; assetType?: string; tokenId?: string };
+        }>(String(result.investment._id), { populate: true, lean: true });
 
         const title =
           (inv as any)?.assetRef?.title ??

@@ -54,13 +54,14 @@ export class PaystackController {
         try {
 
 
-            // Credit User with Vusd
+
             await WalletService.credit(phone, amountUsd);
 
+
             const message = `✅ *Wallet Funding Successful!*
-                Your wallet has been credited with $${amountUsd.toFixed(2)}.
-                You can now invest in available real-world assets by saying:
-                "Show available investments" or "Invest $50 in 1"`
+Your wallet has been credited with $${amountUsd.toFixed(2)}.
+You can now invest in available real-world assets by saying:
+*Show available investments*`
             await WhatsAppService.sendText(phone, message);
 
             this.fastify.log.info(

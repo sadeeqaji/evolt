@@ -109,6 +109,7 @@ export class AgentService {
     [User Context]
     Phone Number: ${phoneNumber}
     Hedera Account ID: ${userAccountId || 'Not yet connected'}
+    Find Balance Token ID: ${process.env.HEDERA_VUSD_TOKEN_ID}
     `;
 
     const messages = [

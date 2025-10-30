@@ -384,6 +384,25 @@ class InvestmentService {
         return await InvestmentModel.find({ investorId }).sort({ createdAt: -1 }).lean();
     }
 
+
+
+    async getInvestmentById<T = any>(
+        id: string,
+        options: { populate?: boolean; lean?: boolean; select?: string } = {}
+    ): Promise<T> {
+        const { populate = true, lean = true, select } = options;
+
+        let q = InvestmentModel.findById(id);
+        if (select) q = q.select(select);
+        if (populate) {
+            q = q.populate("assetRef", "title assetType tokenId");
+        }
+
+        const doc = lean ? await q.lean<T>() : ((await q) as unknown as T);
+        if (!doc) throw new Error("Investment not found");
+        return doc;
+    }
+
     async settleMaturedInvestments() {
         const matured = await InvestmentModel.find({
             status: "active",
