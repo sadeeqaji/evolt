@@ -10,7 +10,9 @@ import assetService from "../asset/asset.service.js";
 import investmentService from '../investment/investment.service.js';
 import PaystackService from 'payment/paystack.service.js';
 import swapService from '@swap/swap.service.js';
-import { AssetDoc } from 'asset/asset.type.js';
+import mongoose from "mongoose";
+
+const isObjectId = (s: string) => mongoose.Types.ObjectId.isValid(s);
 
 const assetListKey = (phone: string) => `assets:${phone}`;
 
@@ -23,18 +25,10 @@ export const createGetRwaAssetsTool = (app: FastifyInstance) => {
       .describe("Filter by status: 'funding', 'funded', 'fully_funded'"),
     search: z.string().optional().describe("A search term to filter pools by name"),
     phoneNumber: z.string().describe("User phone in E.164 or WhatsApp raw"),
-
   });
 
   return tool(
     async ({ status, search, phoneNumber }: z.infer<typeof getRwaAssetsSchema>) => {
-
-      // const hasPin = await PinService.ensurePin(phoneNumber);
-      // if (!hasPin) {
-      //   return "🔐 Please set your transaction PIN — a WhatsApp Flow has been sent.";
-      // }
-      // await PinService.requestAuthorization(phoneNumber, 'Investment')
-
       try {
         const result = await poolService.listPools({
           status: status as any,
@@ -44,27 +38,37 @@ export const createGetRwaAssetsTool = (app: FastifyInstance) => {
         });
         const items = result.items.map((item: any, i: number) => ({
           index: i + 1,
-          id: item._id,
+          assetId: item._id,
+          tokenId: item.tokenId,
           title: item.title,
-          yieldRate: item.yieldRate,
-          fundingProgress: item.fundingProgress,
-          daysLeft: item.daysLeft,
+          yieldRate: item.yieldRate ?? 0,
+          fundingProgress: item.fundingProgress ?? 0,
+          daysLeft: item.daysLeft ?? 0,
         }));
+
+        const formatted = items
+          .map(
+            (a) =>
+              `${a.index}. ${a.title}\n   • Yield: ${(a.yieldRate * 100).toFixed(1)}%\n   • Progress: ${a.fundingProgress.toFixed(0)}%\n   • ${a.daysLeft} days left\n`
+          )
+          .join("\n");
+
         await app.redis.set(assetListKey(phoneNumber), JSON.stringify(items), "EX", 3600);
-        return items.length ? items.join("\n") : "No assets found.";
+
+        return formatted || "No investment pools found at the moment. Please check again later.";
       } catch (e: any) {
-        return `Error: ${e.message}`;
+        console.error("Error fetching RWA assets:", e);
+        return `❌ Error fetching investment pools: ${e?.message || String(e)}`;
       }
     },
     {
       name: "get_rwa_assets",
       description:
-        "Get a list of available real-world assets (RWAs) or investment pools. Use this to show a user what they can invest in.",
+        "Lists available real-world assets or investment pools with yield rate, funding progress, and duration. Caches the result in Redis for lookup during pool joining.",
       schema: getRwaAssetsSchema as any,
     }
   );
 };
-
 
 export const createGetPortfolioTool = () => {
   const portfolioSchema = z.object({
@@ -231,7 +235,7 @@ export const createPreviewEarningsTool = () => {
 export const createJoinPoolTool = (app: FastifyInstance) => {
   const schema = z.object({
     phoneNumber: z.string(),
-    assetId: z.string(),
+    assetId: z.string(), // user may send "1" or a title like "Cow Bell Our Milk"
     amount: z.number().positive(),
   });
 
@@ -239,66 +243,106 @@ export const createJoinPoolTool = (app: FastifyInstance) => {
     async ({ phoneNumber, assetId, amount }: z.infer<typeof schema>) => {
       try {
         const cached = await app.redis.get(assetListKey(phoneNumber));
-        let resolvedId = assetId;
+        let resolvedAssetId: string | undefined;
+        let chosenTitle: string | undefined;
+
         if (cached) {
-          const assets = JSON.parse(cached);
-
-          // if user sent a number (e.g. "2")
+          const assets: Array<{
+            index: number;
+            poolId: string;
+            assetId: string;
+            title: string;
+          }> = JSON.parse(cached);
           if (/^\d+$/.test(assetId.trim())) {
-            const index = parseInt(assetId, 10);
-            resolvedId = assets.find((a: any) => a.index === index)?.id || assetId;
+            const idx = parseInt(assetId.trim(), 10);
+            const hit = assets.find(a => a.index === idx);
+            if (hit?.assetId) {
+              resolvedAssetId = hit.assetId;
+              chosenTitle = hit.title;
+            }
           } else {
-            // 🔍 normalize user input and titles for better matching
-            const userInput = assetId.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
-
-            const match = assets.find((a: any) => {
-              const cleanTitle = a.title.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
-              return cleanTitle.includes(userInput) || userInput.includes(cleanTitle);
-            });
-
-            if (match) resolvedId = match.id;
+            const q = assetId.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
+            const hit = assets.find(a =>
+              a.title.toLowerCase().replace(/[^a-z0-9\s]/g, "").includes(q)
+            );
+            if (hit?.assetId) {
+              resolvedAssetId = hit.assetId;
+              chosenTitle = hit.title;
+            }
           }
         }
-        // if (!resolvedId || resolvedId.length < 10) {
-        //   return "⚠️ I couldn’t identify that asset. Please say 'Show available investments' again to refresh the list.";
-        // }
+
+        if (!resolvedAssetId && isObjectId(assetId)) {
+          resolvedAssetId = assetId;
+        }
+
+        if (!resolvedAssetId || !isObjectId(resolvedAssetId)) {
+          return "⚠️ I couldn’t identify that pool. Please reply with the number shown in the list (e.g. `1`).";
+        }
+
+        const asset = await assetService.getAssetById(resolvedAssetId);
+        if (!asset) {
+          return "⚠️ The selected asset was not found or is no longer available. Please ask for the latest list again.";
+        }
+
         const investor = await investorService.getInvestorByPhone(phoneNumber);
-        if (!investor?.accountId)
+        if (!investor?.accountId) {
           return "You don’t have a wallet yet. Would you like me to create one for you first?";
+        }
 
         const { accountId, _id } = investor;
         const investorId = String(_id);
+
+        if (asset?.tokenId) {
+          try {
+            // Associate the ASSET token so escrow can deliver iTokens later
+            await WalletService.associateTokenFor(phoneNumber, String(asset.tokenId));
+          } catch (e) {
+            console.warn("asset association warn:", (e as any)?.message ?? e);
+          }
+        }
+
+
         const { txId, receipt } = await swapService.transferVusdFromUserToTreasury({
           phoneNumber,
           fromAccountId: accountId,
           amountUsd: amount,
         });
-        if (receipt.status.toString() !== "SUCCESS")
+        if (receipt.status.toString() !== "SUCCESS") {
           return "❌ vUSD transfer failed. Please try again later.";
+        }
 
+        // Record on-chain and in DB
         const result = await investmentService.investFromDepositDirect(
           { accountId, investorId },
-          { assetId: resolvedId, txId, amount }
+          { assetId: resolvedAssetId, txId, amount }
         );
 
-        const inv = await result.investment.populate<{ assetRef: AssetDoc }>("assetRef", "title assetType tokenId");
+        const inv = await investmentService.getInvestmentById(String(result?.investment._id))
+
+
+        const title =
+          (inv as any)?.assetRef?.title ??
+          chosenTitle ??
+          asset.title ??
+          "Selected pool";
 
         return [
           "✅ Investment successful!",
-          `• Asset: ${inv?.assetRef?.title ?? "Selected pool"}`,
+          `• Asset: ${title}`,
           `• Amount: $${amount.toFixed(2)} VUSD`,
-          `• Expected Earnings: $${Number(inv.yieldRate).toFixed(2)} VUSD`,
-          `• Maturity: ${inv.maturedAt ? new Date(inv.maturedAt).toDateString() : 'Not set'}`,
+          `• Expected Earnings: $${Number(result.investment.expectedYield).toFixed(2)} VUSD`,
+          `• Maturity: ${result.investment.maturedAt ? new Date(result.investment.maturedAt).toDateString() : 'Not set'}`,
         ].join("\n");
       } catch (err: any) {
-        console.log(err, 'err')
-        return `❌ Error: ${err}`;
+        console.error("join_pool error:", err);
+        return `❌ Error: ${err?.message || String(err)}`;
       }
     },
     {
       name: "join_pool",
       description:
-        "Invests in a pool. Resolves the actual MongoDB asset ID by index or name from cached results in Redis.",
+        "Invests in a pool. Resolves the user's selection to a valid Asset _id from Redis before moving funds.",
       schema,
     }
   );

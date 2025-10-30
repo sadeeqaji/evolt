@@ -6,6 +6,9 @@ import {
     TransactionReceipt,
     AccountId,
     PrivateKey,
+    AccountInfoQuery,
+    TokenAssociateTransaction,
+    AccountBalanceQuery
 } from "@hashgraph/sdk";
 import { normalizeTxId } from "../util/util.hedera.js";
 import axios from "axios";
@@ -99,8 +102,12 @@ class SwapService {
     }
 
 
+
+
     async transferOrMintVUSD({ to, amount }: { to: string; amount: number }) {
-        const vusdUnits = toUnits(amount, "VUSD");
+
+        const vusdUnits = amount * 1e6;
+
         try {
             const tx = await new TransferTransaction()
                 .addTokenTransfer(TOKENS.VUSD, TREASURY, -vusdUnits)
@@ -125,35 +132,32 @@ class SwapService {
     }
 
 
+
+
     async transferVusdFromUserToTreasury(params: {
         phoneNumber: string;
         fromAccountId: string;
         amountUsd: number;
     }): Promise<{ txId: string; receipt: TransactionReceipt }> {
         const { phoneNumber, fromAccountId, amountUsd } = params;
-        if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
-            throw new Error("Invalid amount");
-        }
+        if (!Number.isFinite(amountUsd) || amountUsd <= 0) throw new Error("Invalid amount");
 
         const userKey: PrivateKey = await getUserKey(phoneNumber);
+        const userAccountId = AccountId.fromString(fromAccountId);
+        const userClient = Client.forTestnet().setOperator(userAccountId, userKey);
 
-        const userClient = Client.forTestnet().setOperator(
-            AccountId.fromString(fromAccountId),
-            userKey
-        );
+        const token = TOKENS.VUSD;
+        const units = toUnits(amountUsd, "VUSD");
 
-        const token = TokenId.fromString(VUSD_TOKEN_ID);
-        const units = toUnits(amountUsd, 'VUSD');
 
         const tx = await new TransferTransaction()
-            .addTokenTransfer(token, AccountId.fromString(fromAccountId), -units)
+            .addTokenTransfer(token, userAccountId, -units)
             .addTokenTransfer(token, AccountId.fromString(TREASURY), units)
             .freezeWith(userClient)
             .sign(userKey);
 
         const resp = await tx.execute(userClient);
         const receipt = await resp.getReceipt(userClient);
-
         return { txId: resp.transactionId.toString(), receipt };
     }
 
