@@ -171,6 +171,7 @@ class PoolService {
                     status: "$derivedStatus",
                     daysLeft: 1,
                     expiryDate: 1,
+                    tokenId: 1,
                     blobUrl: 1,
                     assetType: 1,
                     createdAt: 1,

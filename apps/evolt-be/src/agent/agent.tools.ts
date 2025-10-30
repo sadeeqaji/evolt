@@ -318,9 +318,14 @@ export const createJoinPoolTool = (app: FastifyInstance) => {
           { assetId: resolvedAssetId, txId, amount }
         );
 
+<<<<<<< HEAD
         const inv = await investmentService.getInvestmentById<{
           assetRef?: { title?: string; assetType?: string; tokenId?: string };
         }>(String(result.investment._id), { populate: true, lean: true });
+=======
+        const inv = await investmentService.getInvestmentById(String(result?.investment._id))
+
+>>>>>>> 32112ad (fixed whatsapp agent service)
 
         const title =
           (inv as any)?.assetRef?.title ??
