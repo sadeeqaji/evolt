@@ -1,14 +1,20 @@
 import axios, { AxiosInstance } from "axios";
+import { FastifyInstance } from "fastify";
 import investorService from "../investor/investor.service.js";
 import { DecryptedResponse } from "./whatsapp.type.js";
-import { PinService } from "../pin/pin.service.js";
+import PinService from "../pin/pin.service.js";
+import investmentService from "../investment/investment.service.js";
+import swapService from "../swap/swap.service.js";
+import assetService from "../asset/asset.service.js";
 
 const META_API_URL = "https://graph.facebook.com/v22.0";
 
 export class WhatsAppService {
     private readonly axiosInstance: AxiosInstance;
+    private readonly app: FastifyInstance;
 
-    constructor(axiosInstance?: AxiosInstance) {
+    constructor(app: FastifyInstance, axiosInstance?: AxiosInstance) {
+        this.app = app;
         this.axiosInstance =
             axiosInstance ||
             axios.create({
@@ -20,47 +26,41 @@ export class WhatsAppService {
             });
     }
 
-    /** Send a simple text message */
+    /** Send text message */
     async sendText(to: string, text: string): Promise<void> {
         try {
-            await this.axiosInstance.post(
-                `/${process.env.WHATSAPP_PHONE_ID}/messages`,
-                {
-                    messaging_product: "whatsapp",
-                    to,
-                    type: "text",
-                    text: { body: text },
-                }
-            );
+            await this.axiosInstance.post(`/${process.env.WHATSAPP_PHONE_ID}/messages`, {
+                messaging_product: "whatsapp",
+                to,
+                type: "text",
+                text: { body: text },
+            });
         } catch (error) {
             this.handleError(error);
         }
     }
 
-    /** Send a fully custom WhatsApp message payload (interactive, flow, etc.) */
+    /** Send custom message (interactive, etc.) */
     async sendMessage(data: Record<string, unknown>): Promise<void> {
         try {
-            await this.axiosInstance.post(
-                `/${process.env.WHATSAPP_PHONE_ID}/messages`,
-                data
-            );
-            console.log(data, 'data===')
+            await this.axiosInstance.post(`/${process.env.WHATSAPP_PHONE_ID}/messages`, data);
+            console.log("📤 WhatsApp message sent:", data);
         } catch (error) {
-            console.log(error, 'error')
             this.handleError(error);
         }
     }
 
-    /** Handle flow navigation logic */
+    /** Handle flow logic */
     async getNextScreen(decryptedBody: DecryptedResponse) {
         const { action, screen, data } = decryptedBody;
+        console.log(decryptedBody, 'decryptedBody')
         if (action === "ping") return { data: { status: "active" } };
 
         switch (screen) {
             case "SET_PIN":
                 if (data.pin) {
                     return {
-                        screen: 'CONFIRM_PIN',
+                        screen: "CONFIRM_PIN",
                         next: { type: "screen", name: "CONFIRM_PIN" },
                         data: { pin: Number(data?.pin) },
                     };
@@ -70,11 +70,10 @@ export class WhatsAppService {
                     data: { pin: data?.pin },
                 };
 
-
             case "CONFIRM_PIN": {
                 if (data?.pin !== Number(data?.confirmPin)) {
                     return {
-                        screen: 'SET_PIN',
+                        screen: "SET_PIN",
                         next: { type: "screen", name: "PIN_MISMATCH" },
                         data: { message: "PINs do not match." },
                     };
@@ -87,7 +86,7 @@ export class WhatsAppService {
                 }
 
                 return {
-                    screen: 'PIN_SUCCESS',
+                    screen: "PIN_SUCCESS",
                     next: { type: "screen", name: "PIN_SUCCESS" },
                     data: { message: "Your PIN has been set successfully!" },
                 };
@@ -107,17 +106,13 @@ export class WhatsAppService {
                     String(investor._id),
                     String(data.pin)
                 );
-
                 if (!valid) {
-                    console.log("❌ Invalid transaction PIN for", phoneNumber);
                     return {
                         screen: "INVALID_PIN",
                         next: { type: "screen", name: "INVALID_PIN" },
                         data: { message: "Invalid PIN entered." },
                     };
                 }
-
-                console.log("✅ PIN verified for transaction:", investor._id);
                 return {
                     screen: "TRANSACTION_APPROVED",
                     next: { type: "screen", name: "TRANSACTION_APPROVED" },
@@ -126,9 +121,10 @@ export class WhatsAppService {
             }
 
 
+
             case "PIN_MISMATCH":
                 return {
-                    screen: 'SET_PIN',
+                    screen: "SET_PIN",
                     data: {},
                 };
 
@@ -137,7 +133,7 @@ export class WhatsAppService {
         }
     }
 
-
+    /** Send WhatsApp flow */
     async sendWhatsAppFlow(
         to: string,
         flowId: number,
@@ -150,18 +146,11 @@ export class WhatsAppService {
             type: "interactive",
             interactive: {
                 type: "flow",
-                header: {
-                    type: "text",
-                    text: flowName,
-                },
+                header: { type: "text", text: flowName },
                 body: {
-                    text:
-                        params?.description ||
-                        "Let's get started — please follow the steps below.",
+                    text: params?.description || "Let's get started — please follow the steps below.",
                 },
-                footer: {
-                    text: "Powered by Evolt ⚡️",
-                },
+                footer: { text: "Powered by Evolt ⚡️" },
                 action: {
                     name: "flow",
                     parameters: {
@@ -169,18 +158,14 @@ export class WhatsAppService {
                         flow_cta: flowName,
                         flow_token: to,
                         mode: "published",
-                        flow_message_version:
-                            process.env.WHATSAPP_FLOW_VERSION || "3",
+                        flow_message_version: process.env.WHATSAPP_FLOW_VERSION || "3",
                     },
                 },
             },
         };
 
         try {
-            const res = await this.axiosInstance.post(
-                `/${process.env.WHATSAPP_PHONE_ID}/messages`,
-                payload
-            );
+            await this.axiosInstance.post(`/${process.env.WHATSAPP_PHONE_ID}/messages`, payload);
         } catch (error) {
             this.handleError(error);
         }
@@ -188,15 +173,9 @@ export class WhatsAppService {
 
     private handleError(error: unknown): void {
         if (axios.isAxiosError(error)) {
-            console.error(
-                "❌ WhatsApp API Error:",
-                error.response?.data || error.message
-            );
+            console.error("❌ WhatsApp API Error:", error.response?.data || error.message);
         } else {
             console.error("❌ Unexpected Error:", error);
         }
-        throw new Error("Failed to send WhatsApp message");
     }
 }
-
-export default new WhatsAppService();

@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply, FastifyInstance } from "fastify";
 import crypto from "crypto";
 import { PaystackEvent, SuccessfulChargeEvent } from "./paystack.types.js";
-import WhatsAppService from "../whatsapp/whatsapp.service.js";
+import { WhatsAppService } from "../whatsapp/whatsapp.service.js";
 import { WalletService } from "../wallet/wallet.service.js";
 import PaystackService from "./paystack.service.js";
 
@@ -10,9 +10,12 @@ const PAYSTACK_WHITELIST_IPS = ["52.31.139.75", "52.49.173.169", "52.214.14.220"
 
 export class PaystackController {
     private readonly paystackService: PaystackService;
+    private whatsappService: WhatsAppService;
 
     constructor(private readonly fastify: FastifyInstance) {
         this.paystackService = new PaystackService(fastify);
+        this.whatsappService = new WhatsAppService(fastify);
+
     }
 
     /** ------------------------------------------------------------------
@@ -62,7 +65,7 @@ export class PaystackController {
 Your wallet has been credited with $${amountUsd.toFixed(2)}.
 You can now invest in available real-world assets by saying:
 *Show available investments*`
-            await WhatsAppService.sendText(phone, message);
+            await this.whatsappService.sendText(phone, message);
 
             this.fastify.log.info(
                 `✅ Processed Paystack payment — Phone: ${phone}, Amount: $${amountUsd}, Ref: ${reference}`

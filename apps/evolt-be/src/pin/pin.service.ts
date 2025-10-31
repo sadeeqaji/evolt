@@ -2,21 +2,90 @@ import bcrypt from "bcrypt";
 import { Types } from "mongoose";
 import { UserPinModel } from "./pin.model.js";
 import investorService from "../investor/investor.service.js";
-import whatsappService from "../whatsapp/whatsapp.service.js";
+import axios, { AxiosInstance } from "axios";
+
+const FLOW_ID_SETUP_PIN = 825971416509314;
+const FLOW_ID_ENTER_TRANSACTION = 1183982320271062;
+const META_API_URL = "https://graph.facebook.com/v22.0";
 
 /**
  * Handles secure PIN management, WhatsApp Flow triggers,
  * and authorization verification for sensitive transactions.
  */
-
-const FLOW_ID_SETUP_PIN = 825971416509314;
-const FLOW_ID_ENTER_TRANSACTION = 1183982320271062;
-
 export class PinService {
+    private readonly axiosInstance: AxiosInstance;
+
+    constructor(axiosInstance?: AxiosInstance) {
+        this.axiosInstance =
+            axiosInstance ||
+            axios.create({
+                baseURL: META_API_URL,
+                headers: {
+                    Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+                    "Content-Type": "application/json",
+                },
+            });
+    }
+
+    /** ----------------------------------------------------------------
+     *  WhatsApp helper
+     * ---------------------------------------------------------------- */
+    private async sendWhatsAppFlow(
+        to: string,
+        flowId: number,
+        flowName: string,
+        params?: Record<string, unknown>
+    ): Promise<void> {
+        const payload = {
+            messaging_product: "whatsapp",
+            to,
+            type: "interactive",
+            interactive: {
+                type: "flow",
+                header: { type: "text", text: flowName },
+                body: {
+                    text:
+                        params?.description ||
+                        "Let's get started — please follow the steps below.",
+                },
+                footer: { text: "Powered by Evolt ⚡️" },
+                action: {
+                    name: "flow",
+                    parameters: {
+                        flow_id: flowId,
+                        flow_cta: flowName,
+                        flow_token: to,
+                        mode: "published",
+                        flow_message_version: process.env.WHATSAPP_FLOW_VERSION || "3",
+                    },
+                },
+            },
+        };
+
+        try {
+            await this.axiosInstance.post(
+                `/${process.env.WHATSAPP_PHONE_ID}/messages`,
+                payload
+            );
+        } catch (error) {
+            this.handleError(error);
+        }
+    }
+
+    private handleError(error: unknown): void {
+        if (axios.isAxiosError(error)) {
+            console.error("❌ WhatsApp API Error:", error.response?.data || error.message);
+        } else {
+            console.error("❌ Unexpected Error:", error);
+        }
+    }
+
+    /** ----------------------------------------------------------------
+     *  PIN management
+     * ---------------------------------------------------------------- */
 
     /** Set or update a user's PIN */
-    static async setPin(userId: string | Types.ObjectId, pin: string) {
-
+    async setPin(userId: string | Types.ObjectId, pin: string) {
         const hashed = await bcrypt.hash(pin, 10);
         await UserPinModel.findOneAndUpdate(
             { userId },
@@ -27,60 +96,68 @@ export class PinService {
     }
 
     /** Verify user-entered PIN */
-    static async verifyPin(userId: string | Types.ObjectId, pin: string) {
+    async verifyPin(userId: string | Types.ObjectId, pin: string) {
         const record = await UserPinModel.findOne({ userId });
         if (!record) return false;
         return await bcrypt.compare(pin, record.hashedPin);
     }
 
     /** Delete a PIN (e.g. user resets) */
-    static async deletePin(userId: string | Types.ObjectId) {
+    async deletePin(userId: string | Types.ObjectId) {
         await UserPinModel.deleteOne({ userId });
         return { message: "PIN removed successfully" };
     }
 
-    static async hasPin(userId: string | Types.ObjectId) {
+    async hasPin(userId: string | Types.ObjectId) {
         const record = await UserPinModel.findOne({ userId });
         return !!record;
     }
 
+    /** ----------------------------------------------------------------
+     *  WhatsApp-integrated transaction flows
+     * ---------------------------------------------------------------- */
 
-
-    static async ensurePin(phoneNumber: string): Promise<boolean> {
+    /** Ensure PIN exists, otherwise trigger WhatsApp setup flow */
+    async ensurePin(phoneNumber: string): Promise<boolean> {
         const investor = await investorService.getInvestorByPhone(phoneNumber);
         if (!investor) throw new Error("Investor not found");
 
         const hasPin = await this.hasPin(String(investor._id));
         if (hasPin) return true;
 
-        await whatsappService.sendWhatsAppFlow(phoneNumber, FLOW_ID_SETUP_PIN, "Set Transaction PIN");
+        await this.sendWhatsAppFlow(phoneNumber, FLOW_ID_SETUP_PIN, "Set Transaction PIN");
         console.log(`📲 Triggered WhatsApp flow for ${phoneNumber} to set PIN`);
         return false;
     }
 
-
-    static async requestAuthorization(phoneNumber: string, actionName: string): Promise<void> {
-        await whatsappService.sendWhatsAppFlow(phoneNumber, FLOW_ID_ENTER_TRANSACTION, `Authorize ${actionName}`);
+    /** Send WhatsApp authorization flow for a secure action */
+    async requestAuthorization(phoneNumber: string, actionName: string): Promise<void> {
+        await this.sendWhatsAppFlow(
+            phoneNumber,
+            FLOW_ID_ENTER_TRANSACTION,
+            `Authorize ${actionName}`
+        );
         console.log(`📲 Sent authorization flow to ${phoneNumber} for action: ${actionName}`);
     }
 
-
-    static async verifyAuthorization(userId: string, pin: string): Promise<boolean> {
+    /** Verify authorization (PIN check) */
+    async verifyAuthorization(userId: string, pin: string): Promise<boolean> {
         return await this.verifyPin(userId, pin);
     }
 
-
-    static async resetPin(phoneNumber: string, triggerSetup = false) {
+    /** Reset PIN and optionally trigger setup flow again */
+    async resetPin(phoneNumber: string, triggerSetup = false) {
         const investor = await investorService.getInvestorByPhone(phoneNumber);
         if (!investor) throw new Error("Investor not found");
         await this.deletePin(String(investor._id));
 
         if (triggerSetup) {
-            await whatsappService.sendWhatsAppFlow(phoneNumber, FLOW_ID_SETUP_PIN, "Reset Transaction PIN");
+            await this.sendWhatsAppFlow(phoneNumber, FLOW_ID_SETUP_PIN, "Reset Transaction PIN");
         }
 
         return { message: "PIN reset successfully" };
     }
 }
 
-export default PinService;
+export const pinService = new PinService();
+export default pinService;

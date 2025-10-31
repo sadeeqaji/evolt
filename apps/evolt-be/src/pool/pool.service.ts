@@ -18,11 +18,16 @@ interface PoolListOptions {
 
 class PoolService {
 
-    async listPools({ status = "all", page = 1, limit = 20, search, assetType }: PoolListOptions) {
+    async listPools({ status = "all", page = 1, limit = 20, search, assetType }: {
+        status?: "funding" | "funded" | "fully_funded" | "all";
+        page?: number;
+        limit?: number;
+        search?: string;
+        assetType?: "invoice" | "agriculture" | "real_estate" | "creator_ip" | "receivable";
+    }) {
         const skip = (page - 1) * limit;
 
-        const match: Record<string, any> = { status: 'tokenized' };
-
+        const match: Record<string, any> = { status: "tokenized" };
         if (search) {
             match.$or = [
                 { projectName: new RegExp(search, "i") },
@@ -30,14 +35,12 @@ class PoolService {
                 { "corp.name": new RegExp(search, "i") },
             ];
         }
-
-        if (assetType) {
-            match.assetType = assetType;
-        }
+        if (assetType) match.assetType = assetType;
 
         const base: PipelineStage[] = [
             { $match: match },
 
+            // Join business
             {
                 $lookup: {
                     from: BusinessModel.collection.name,
@@ -48,6 +51,7 @@ class PoolService {
             },
             { $unwind: { path: "$biz", preserveNullAndEmptyArrays: true } },
 
+            // Join corporate
             {
                 $lookup: {
                     from: CorporateModel.collection.name,
@@ -58,27 +62,21 @@ class PoolService {
             },
             { $unwind: { path: "$corp", preserveNullAndEmptyArrays: true } },
 
+            // ✅ Sum funded by *assetId*
             {
                 $lookup: {
                     from: InvestmentModel.collection.name,
-                    let: { tokenId: "$tokenId", tokenEvm: "$tokenEvm" },
+                    let: { assetId: "$_id" },
                     pipeline: [
-                        {
-                            $match: {
-                                $expr: {
-                                    $or: [
-                                        { $eq: ["$tokenId", "$$tokenId"] },
-                                        { $eq: ["$tokenId", "$$tokenEvm"] },
-                                    ],
-                                },
-                            },
-                        },
+                        // swap this for the $toObjectId version if needed
+                        { $match: { $expr: { $eq: ["$assetId", "$$assetId"] } } },
                         { $group: { _id: null, funded: { $sum: "$vusdAmount" } } },
                     ],
                     as: "agg",
                 },
             },
 
+            // Derive convenient fields
             {
                 $addFields: {
                     businessName: "$biz.businessName",
@@ -90,16 +88,14 @@ class PoolService {
                             0,
                             {
                                 $ceil: {
-                                    $divide: [
-                                        { $subtract: ["$expiryDate", new Date()] },
-                                        1000 * 60 * 60 * 24,
-                                    ],
+                                    $divide: [{ $subtract: ["$expiryDate", new Date()] }, 1000 * 60 * 60 * 24],
                                 },
                             },
                         ],
                     },
                 },
             },
+
 
             {
                 $addFields: {
@@ -123,22 +119,15 @@ class PoolService {
                 },
             },
 
+            // Derived status bucket
             {
                 $addFields: {
                     derivedStatus: {
                         $switch: {
                             branches: [
+                                { case: { $gte: ["$fundingProgress", 100] }, then: "fully_funded" },
                                 {
-                                    case: { $gte: ["$fundingProgress", 100] },
-                                    then: "fully_funded",
-                                },
-                                {
-                                    case: {
-                                        $and: [
-                                            { $gte: ["$fundingProgress", 1] },
-                                            { $lt: ["$fundingProgress", 100] },
-                                        ],
-                                    },
+                                    case: { $and: [{ $gte: ["$fundingProgress", 1] }, { $lt: ["$fundingProgress", 100] }] },
                                     then: "funded",
                                 },
                             ],
@@ -149,9 +138,7 @@ class PoolService {
             },
         ];
 
-        if (status !== "all") {
-            base.push({ $match: { derivedStatus: status } });
-        }
+        if (status !== "all") base.push({ $match: { derivedStatus: status } });
 
         const dataPipeline: PipelineStage[] = [
             ...base,
@@ -190,7 +177,6 @@ class PoolService {
         ]);
 
         const total = countAgg[0]?.total ?? 0;
-
         return { page, limit, total, items };
     }
 
