@@ -16,10 +16,10 @@ This project uses **NPM Workspaces** for a cohesive monorepo setup:
 ```markdown
 evolt/
 ├── apps/
-│ ├── evolt-be/    # ⚡ Fastify + TypeScript backend (Hedera SDK integration)
-│ └── evolt-fe/    # 💻 Next.js frontend (dApp & WalletConnect)
-├── package.json   # Root workspace configuration
-└── README.md      # This file
+│ ├── evolt-be/ # ⚡ Fastify + TypeScript backend (Hedera SDK integration)
+│ └── evolt-fe/ # 💻 Next.js frontend (dApp & WalletConnect)
+├── package.json # Root workspace configuration
+└── README.md # This file
 ```
 
 ---
@@ -28,16 +28,16 @@ evolt/
 
 Evolt is built on a modern, high-performance stack, with **Hedera Hashgraph** at its core for speed, security, and low fees.
 
-| Layer | Technology | Key Use / Notes |
-| :--- | :--- | :--- |
-| **Blockchain** | **Hedera Hashgraph** | Fast, final, and secure ledger for RWA tokenization. |
-| **Backend** | Fastify 5, **Hedera SDK**, TypeScript | High-throughput API gateway for Hedera interactions (HCS, HTS, Smart Contracts). |
-| **Frontend** | Next.js 15, Tailwind CSS, WalletConnect | Blazing-fast dApp with multi-wallet support. |
-| **Messaging** | **WhatsApp Cloud API** | Enables RWA fractional trading/reporting directly via the world's most popular messaging app. |
-| **Database** | MongoDB (Atlas) | Flexible, scalable data storage. |
-| **Queueing** | BullMQ + Redis | Reliable, transactional queue for handling Hedera consensus/mirror node updates. |
-| **Storage/Security** | Azure Blob Storage + Key Vault | Secure storage for KYC documents and secret management. |
-| **AI (Optional)** | OpenAI GPT-4o / GPT-5 | Future integration for sophisticated investment analysis or conversational trading bots. |
+| Layer                | Technology                              | Key Use / Notes                                                                               |
+| :------------------- | :-------------------------------------- | :-------------------------------------------------------------------------------------------- |
+| **Blockchain**       | **Hedera Hashgraph**                    | Fast, final, and secure ledger for RWA tokenization.                                          |
+| **Backend**          | Fastify 5, **Hedera SDK**, TypeScript   | High-throughput API gateway for Hedera interactions (HCS, HTS, Smart Contracts).              |
+| **Frontend**         | Next.js 15, Tailwind CSS, WalletConnect | Blazing-fast dApp with multi-wallet support.                                                  |
+| **Messaging**        | **WhatsApp Cloud API**                  | Enables RWA fractional trading/reporting directly via the world's most popular messaging app. |
+| **Database**         | MongoDB (Atlas)                         | Flexible, scalable data storage.                                                              |
+| **Queueing**         | BullMQ + Redis                          | Reliable, transactional queue for handling Hedera consensus/mirror node updates.              |
+| **Storage/Security** | Azure Blob Storage + Key Vault          | Secure storage for KYC documents and secret management.                                       |
+| **AI (Optional)**    | OpenAI GPT-4o / GPT-5                   | Future integration for sophisticated investment analysis or conversational trading bots.      |
 
 ---
 
@@ -51,23 +51,23 @@ The Evolt platform leverages a hybrid architecture to combine the speed and trus
 
 1.**Read Operations (Data Retrieval):**
 
-* The **Frontend UI** requests non-critical, historical, or display-only data directly from the **Mirror Nodes** via optional API calls.
-* The **Backend** also uses **Mirror Queries** to gather state and transaction history that originates from the **Hedera Network**.
+- The **Frontend UI** requests non-critical, historical, or display-only data directly from the **Mirror Nodes** via optional API calls.
+- The **Backend** also uses **Mirror Queries** to gather state and transaction history that originates from the **Hedera Network**.
 
-2.**Backend-Initiated Transactions (Platform Services):**
+  2.**Backend-Initiated Transactions (Platform Services):**
 
-* The **Frontend UI** communicates with the **Backend** via **REST/WS** for off-chain actions (like user auth, KYC, or internal state updates).
-* The **Backend** uses the **Hedera SDK** to execute Hedera-specific transactions (e.g., token issuance, compliance checks, data logging to HCS).
+- The **Frontend UI** communicates with the **Backend** via **REST/WS** for off-chain actions (like user auth, KYC, or internal state updates).
+- The **Backend** uses the **Hedera SDK** to execute Hedera-specific transactions (e.g., token issuance, compliance checks, data logging to HCS).
 
-3.**User-Initiated On-Chain Transactions (Trading/Transfer):**
+  3.**User-Initiated On-Chain Transactions (Trading/Transfer):**
 
-* For actions requiring a user signature (e.g., purchasing a fractional RWA token), the **Frontend UI** facilitates a **Signed Transaction** via **WalletConnect**.
-* This transaction is submitted directly to the **Smart Contracts (Hedera EVM)** for execution against our escrow/token contracts.
+- For actions requiring a user signature (e.g., purchasing a fractional RWA token), the **Frontend UI** facilitates a **Signed Transaction** via **WalletConnect**.
+- This transaction is submitted directly to the **Smart Contracts (Hedera EVM)** for execution against our escrow/token contracts.
 
-4.**State Synchronization:**
+  4.**State Synchronization:**
 
-* All transactions submitted to the **Hedera Network (Consensus & Services)** result in **State & Events**.
-* These events are reliably indexed by the **Mirror Nodes**, ensuring all parts of the application have access to the final, consistent state of RWA token ownership and balances.
+- All transactions submitted to the **Hedera Network (Consensus & Services)** result in **State & Events**.
+- These events are reliably indexed by the **Mirror Nodes**, ensuring all parts of the application have access to the final, consistent state of RWA token ownership and balances.
 
 ---
 
@@ -167,16 +167,16 @@ yarn run dev
 
 This starts:
 
-* **Backend API** (Fastify) on port `3000`
-* **Frontend dApp** (Next.js) on port `2020`
+- **Backend API** (Fastify) on port `3000`
+- **Frontend dApp** (Next.js) on port `2020`
 
 ### Individual Application Commands
 
 You can also run the services separately:
 
-| Application | Command | Port |
-| :--- | :--- | :--- |
-| **Backend Only** | `yarn run dev:be` | `3000` |
+| Application       | Command           | Port   |
+| :---------------- | :---------------- | :----- |
+| **Backend Only**  | `yarn run dev:be` | `3000` |
 | **Frontend Only** | `yarn run dev:fe` | `2020` |
 
 ### Backend Build
@@ -188,3 +188,13 @@ cd apps/evolt-be
 yarn run build
 yarn run start
 ```
+
+### Link
+
+Click on this link for [Demo of our MVP](https://app.useevolt.xyz)
+
+Click on this link for [Chat our Ai Agent](https://wa.me/2349139932585?text=Hello%20Evolt%20AI)
+
+Click on this link for [Pitch Deck](https://drive.google.com/file/d/1M1P8SE27k3WhL6Qd_CTwtd6EUJjStnnQ/view?usp=sharing)
+
+Click on this link [Hedera Certificate ](https://drive.google.com/file/d/10J-NIxtKiLFKjHZvMe3cQapVFtVW5xhp/view?usp=sharing)
