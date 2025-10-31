@@ -29,9 +29,7 @@ function hashscanTxUrl(
   network = process.env.NEXT_PUBLIC_HASHSCAN_NETWORK ?? "testnet"
 ) {
   return hcsTxId
-    ? `https://hashscan.io/${network}/transaction/${encodeURIComponent(
-        hcsTxId
-      )}`
+    ? `https://hashscan.io/${network}/token/${encodeURIComponent(hcsTxId)}`
     : "#";
 }
 
@@ -100,7 +98,7 @@ export default function PoolDetailClient({ poolId }: PoolDetailClientProps) {
         verifiedBy={data.verifier ?? "Not specified"}
         verifierTitle="Finance Manager"
         verificationDate={formatDateTime(data.verifiedAt)}
-        blockchainExplorerUrl={hashscanTxUrl(data.hcsTxId)!}
+        blockchainExplorerUrl={hashscanTxUrl(data.tokenId)!}
       />
 
       <Button
