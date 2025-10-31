@@ -5080,9 +5080,9 @@ buffer@^5.4.3:
     ieee754 "^1.1.13"
 
 bullmq@^5.59.0:
-  version "5.62.2"
-  resolved "https://registry.yarnpkg.com/bullmq/-/bullmq-5.62.2.tgz#32cc310eedad3ad0dad2ee05e9fcb513913fe9f5"
-  integrity sha512-ohF2hdsjBhcedHSotB8XfL27+u1+C6Uyuw4jgVeiflB8BdpydoMnqX3jFzWfNkIVfQDWR6XsJE3BgRQtOLsvjw==
+  version "5.63.0"
+  resolved "https://registry.yarnpkg.com/bullmq/-/bullmq-5.63.0.tgz#b36d5273518bb6eda50fa775127db0faf0b239c3"
+  integrity sha512-HT1iM3Jt4bZeg3Ru/MxrOy2iIItxcl1Pz5Ync1Vrot70jBpVguMxFEiSaDU57BwYwR4iwnObDnzct2lirKkX5A==
   dependencies:
     cron-parser "^4.9.0"
     ioredis "^5.4.1"
