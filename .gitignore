@@ -31,5 +31,3 @@ logs/
 
 # Misc
 *.tgz
-package-lock.json
-yarn.lock
