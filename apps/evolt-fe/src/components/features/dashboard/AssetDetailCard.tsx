@@ -5,7 +5,6 @@ import { ExternalLink, Info } from "lucide-react";
 
 interface InvoiceCardProps {
   invoiceNumber: string;
-
   logoUrl?: string;
   smeVendorDescription: string;
   corporatePayerDescription: string;
